@@ -7,20 +7,41 @@
 ## Visual First: What This Project Proves
 
 <div align="center">
-  <img src="Co_Relation/AOD_Correction/Condensed_SideBySide_Spike_Curves.png" width="31%" alt="AOD and PM2.5 temporal divergence" />
-  <img src="Co_Relation/AOD_Correction/ML_Plots_B/01_proof_R2_progression.png" width="31%" alt="R2 progression across model groups" />
-  <img src="Co_Relation/AOD_Correction/ML_Plots_B/10_proof_summary_card.png" width="31%" alt="One-card proof summary" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/01_proof_R2_progression.png" width="24%" alt="R2 progression" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/02_actual_vs_predicted.png" width="24%" alt="Actual vs predicted" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/03_importance_by_category.png" width="24%" alt="Importance by category" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/04_top20_feature_importance.png" width="24%" alt="Top features" />
 </div>
-
-<p align="center"><sub>Three compact, side-by-side visuals: divergence pattern, modeling evidence, and final proof snapshot.</sub></p>
 
 <div align="center">
-  <img src="Co_Relation/AOD_Correction/ML_Plots_B/06_conditional_AOD_performance.png" width="31%" alt="Conditional AOD performance" />
-  <img src="Co_Relation/AOD_Correction/ML_Plots_B/08_raw_vs_corrected_AOD_scatter.png" width="31%" alt="Raw vs corrected AOD relation" />
-  <img src="Co_Relation/AOD_Correction/ML_Plots_B/09_residual_analysis.png" width="31%" alt="Residual diagnostics" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/06_conditional_AOD_performance.png" width="24%" alt="Conditional performance" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/07_season_rain_AOD_heatmap.png" width="24%" alt="Season rain heatmap" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/08_raw_vs_corrected_AOD_scatter.png" width="24%" alt="Raw vs corrected AOD" />
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/09_residual_analysis.png" width="24%" alt="Residual analysis" />
 </div>
 
-<p align="center"><sub>Main focus stays on figures while keeping page footprint compact.</sub></p>
+<div align="center">
+  <img src="Co_Relation/AOD_Correction/ML_Plots_B/10_proof_summary_card.png" width="24%" alt="Proof summary" />
+  <img src="Co_Relation/AOD_Correction/Condensed_SideBySide_Spike_Curves.png" width="24%" alt="Temporal divergence" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/01_dataset_composition.png" width="24%" alt="Dataset composition" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/02_observations_by_year.png" width="24%" alt="Observations by year" />
+</div>
+
+<div align="center">
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/03_geo_zone_breakdown.png" width="24%" alt="Geo zone" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/04_overall_missingness.png" width="24%" alt="Missingness" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/12_spearman_correlation_matrix.png" width="24%" alt="Spearman matrix" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/13_variable_distributions.png" width="24%" alt="Distributions" />
+</div>
+
+<div align="center">
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/15_aod_pm25_by_season.png" width="24%" alt="AOD PM2.5 season" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/16_aod_pm25_by_rain_status.png" width="24%" alt="AOD PM2.5 rain" />
+  <img src="Co_Relation/AOD_Correction/Correlation_Plots/01_spearman_full_matrix.png" width="24%" alt="Spearman full matrix" />
+  <img src="Co_Relation/AOD_Correction/Correlation_Plots/06_AOD_PM25_scatter_by_season.png" width="24%" alt="Scatter by season" />
+</div>
+
+<p align="center"><sub>20 curated colorful visuals from ML, EDA, and correlation outputs (compact layout).</sub></p>
 
 ## Abstract
 
