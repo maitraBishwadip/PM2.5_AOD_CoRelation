@@ -1,6 +1,6 @@
 """
 =============================================================================
-EXPLORATORY DATA ANALYSIS — AOD Proxy Study | Bangladesh Dataset
+EXPLORATORY DATA ANALYSIS — AOD Proxy Study | From 10 Stations in Bangladesh 2014-2021
 =============================================================================
 
 PURPOSE:
