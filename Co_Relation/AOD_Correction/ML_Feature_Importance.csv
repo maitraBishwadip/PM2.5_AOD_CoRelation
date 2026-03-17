@@ -1,0 +1,64 @@
+Feature,Importance,Model,Model_ID
+DayOfYear,0.1884174332819131,Model 3: Full Dataset A,M3
+Season_ord,0.1853520911806742,Model 3: Full Dataset A,M3
+Month,0.12628044962099952,Model 3: Full Dataset A,M3
+Temperature,0.0919147466746782,Model 3: Full Dataset A,M3
+Station_enc,0.07013188211999254,Model 3: Full Dataset A,M3
+GeoZone_enc,0.04903094771277489,Model 3: Full Dataset A,M3
+BP,0.04860446431826431,Model 3: Full Dataset A,M3
+RH,0.039474042847257064,Model 3: Full Dataset A,M3
+Solar Rad,0.028203587040177846,Model 3: Full Dataset A,M3
+Temp_ord,0.02803935299061145,Model 3: Full Dataset A,M3
+Longitude,0.027111682571716405,Model 3: Full Dataset A,M3
+Wind Speed,0.023829514710322575,Model 3: Full Dataset A,M3
+Latitude,0.02247460420029939,Model 3: Full Dataset A,M3
+Rain,0.016202337566741602,Model 3: Full Dataset A,M3
+WindDir_sin,0.015491790164799816,Model 3: Full Dataset A,M3
+AOD,0.0106005917501115,Model 3: Full Dataset A,M3
+Rain_Status_ord,0.007084752533044688,Model 3: Full Dataset A,M3
+Humidity_ord,0.0066093973597362195,Model 3: Full Dataset A,M3
+WindDir_cos,0.005230841902734969,Model 3: Full Dataset A,M3
+WindDir_missing,0.003036747176026306,Model 3: Full Dataset A,M3
+Wind_Origin_missing,0.0029274999962737155,Model 3: Full Dataset A,M3
+AOD_Loading_ord,0.0022084338226680475,Model 3: Full Dataset A,M3
+Wind_Polluted,0.0017428084581818186,Model 3: Full Dataset A,M3
+DayOfYear,0.1443984580534042,Model 5: Full Dataset B,M5
+Season_ord,0.14428933175218744,Model 5: Full Dataset B,M5
+Month,0.09992748736832838,Model 5: Full Dataset B,M5
+Temperature,0.07187765656659958,Model 5: Full Dataset B,M5
+Station_enc,0.05987323303062867,Model 5: Full Dataset B,M5
+Month_cos,0.05983947771893587,Model 5: Full Dataset B,M5
+Month_sin,0.05946880894549726,Model 5: Full Dataset B,M5
+GeoZone_enc,0.041037147722863536,Model 5: Full Dataset B,M5
+BP,0.03053296873695975,Model 5: Full Dataset B,M5
+Longitude,0.02540220481173997,Model 5: Full Dataset B,M5
+AOD_x_Season,0.02527160589521044,Model 5: Full Dataset B,M5
+RH,0.019561080601293405,Model 5: Full Dataset B,M5
+f_RH,0.019404376387762858,Model 5: Full Dataset B,M5
+BL_proxy,0.018761337543521057,Model 5: Full Dataset B,M5
+Latitude,0.018171222734796412,Model 5: Full Dataset B,M5
+Solar Rad,0.01740407224869097,Model 5: Full Dataset B,M5
+Wind Speed,0.015066614830662146,Model 5: Full Dataset B,M5
+Temp_ord,0.01480412842597165,Model 5: Full Dataset B,M5
+AOD_FULL_corr,0.013060487230248262,Model 5: Full Dataset B,M5
+Rain,0.010621851994741159,Model 5: Full Dataset B,M5
+WindDir_sin,0.01043048808022724,Model 5: Full Dataset B,M5
+Wet_scavenge,0.01028609750767806,Model 5: Full Dataset B,M5
+AOD_BLH_corr,0.01028019793996006,Model 5: Full Dataset B,M5
+AOD_x_WS,0.009254165497914909,Model 5: Full Dataset B,M5
+AOD_x_SolRad,0.006885946536794317,Model 5: Full Dataset B,M5
+AOD_RH_corr,0.004690806444170423,Model 5: Full Dataset B,M5
+AOD_x_Temp,0.00454642851226682,Model 5: Full Dataset B,M5
+Rain_Status_ord,0.0041438059797617,Model 5: Full Dataset B,M5
+AOD_x_RH,0.004138939564635756,Model 5: Full Dataset B,M5
+AOD_log,0.003272484546541599,Model 5: Full Dataset B,M5
+AOD_sqrt,0.0032547518102129013,Model 5: Full Dataset B,M5
+AOD_x_WindPol,0.003236112664632664,Model 5: Full Dataset B,M5
+AOD,0.003162340634340802,Model 5: Full Dataset B,M5
+WindDir_cos,0.0030831458971666897,Model 5: Full Dataset B,M5
+AOD_sq,0.00308103588630996,Model 5: Full Dataset B,M5
+Humidity_ord,0.0028829268239760103,Model 5: Full Dataset B,M5
+WindDir_missing,0.0017845490553373465,Model 5: Full Dataset B,M5
+Wind_Origin_missing,0.001673414106304642,Model 5: Full Dataset B,M5
+Wind_Polluted,0.0008583998977272268,Model 5: Full Dataset B,M5
+AOD_Loading_ord,0.00028041001399776663,Model 5: Full Dataset B,M5
