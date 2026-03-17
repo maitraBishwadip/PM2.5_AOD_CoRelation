@@ -21,8 +21,8 @@
 </div>
 
 <div align="center">
-  <img src="Co_Relation/AOD_Correction/ML_Plots_B/10_proof_summary_card.png" width="24%" alt="Proof summary" />
-  <img src="Co_Relation/AOD_Correction/Condensed_SideBySide_Spike_Curves.png" width="24%" alt="Temporal divergence" />
+  <img src="Co_Relation\AOD_Correction\ML_Plots_B\09_residual_analysis.png" width="24%" alt="Proof summary" />
+  <img src="Co_Relation/AOD_Correction/EDA_Plots/Condensed_SideBySide_Spike_Curves.png" width="24%" alt="Temporal divergence" />
   <img src="Co_Relation/AOD_Correction/EDA_Plots/01_dataset_composition.png" width="24%" alt="Dataset composition" />
   <img src="Co_Relation/AOD_Correction/EDA_Plots/02_observations_by_year.png" width="24%" alt="Observations by year" />
 </div>
