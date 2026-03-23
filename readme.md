@@ -581,16 +581,3 @@ openpyxl >= 3.1          # reading .xlsx files
 
 ---
 
-## 17. AI Use Statement
-
-AI tools (Claude, Anthropic) were used throughout this research project for the following tasks:
-
-- **Research question formulation**: Brainstorming and refining the core research questions and framing.
-- **Literature synthesis**: Identifying and summarising relevant papers on AOD correction methods, hygroscopic growth factors, and Bangladesh aerosol characterisation.
-- **Methodology design**: Discussing and evaluating the season-adaptive correction framework, feature engineering choices, and ML model selection.
-- **Python code generation**: Writing and iteratively debugging all five pipeline scripts, the figure generation script, and the geopandas station map script.
-- **Write-up drafting**: Generating the IEEE LaTeX paper, this README, and the presentation slide deck.
-
-**All analysis decisions, model training, result interpretation, figure review, scientific judgements, and final writing were independently performed and verified by the author.** The dataset was used solely for this assignment and was not shared with any external party or service beyond the Claude.ai interface.
-
---
