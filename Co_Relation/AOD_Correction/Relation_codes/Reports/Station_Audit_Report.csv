@@ -1,0 +1,11 @@
+Station,In_AOD_file,AOD_coverage_%,In_Location_file,Latitude,Longitude,In_DoE_Excel,DoE_Sheet_Name,DoE_Data_Extracted,Met_Variables_Pass,Final_Daily_Rows,Temporal_Coverage_%,Selected,Exclusion_Reason
+Farmgate,True,55.8,True,23.759733,90.389406,True,Farmgate,True,True,21789,745.7,True,Passed all selection criteria
+Sopura,True,52.3,True,24.380426,88.605089,True,Sopura,True,True,20471,700.6,True,Passed all selection criteria
+Khanpur,True,56.9,True,23.62649,90.507686,True,Khanpur,True,True,17696,605.6,True,Passed all selection criteria
+Darus Salam,True,55.1,True,23.78086,90.355647,True,Darus Salam,True,True,16392,561.0,True,Passed all selection criteria
+Uttar Bagura Road,True,56.7,True,22.709818,90.362498,True,Uttar Bagura Road,True,True,15879,543.4,True,Passed all selection criteria
+Khulshi,True,58.2,True,22.361635,91.799878,True,Khulshi,True,True,14469,495.2,True,Passed all selection criteria
+Agrabad,True,57.3,True,22.323153,91.802209,True,Agrabad,True,True,14119,483.2,True,Passed all selection criteria
+Red Crescent Office,True,59.7,True,24.88885,91.867327,True,Red Crescent Office,True,True,8726,298.6,True,Passed all selection criteria
+Baira,True,58.1,True,22.842361,89.539806,True,Baira,True,False,0,0.0,False,"Required met variables with <10% data: ['Wind Speed', 'Wind Dir']"
+East Chandana,True,51.9,True,23.95500584,90.27962306,True,East Chandana,True,False,0,0.0,False,"Required met variables with <10% data: ['Wind Speed', 'Wind Dir']"

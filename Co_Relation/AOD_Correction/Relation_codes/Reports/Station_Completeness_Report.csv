@@ -1,0 +1,11 @@
+Station,Total_Rows_After_Strip,PM2.5_coverage_%,PM2.5_non_null,PM2.5_col_exists,Wind Speed_coverage_%,Wind Speed_non_null,Wind Speed_col_exists,Wind Dir_coverage_%,Wind Dir_non_null,Wind Dir_col_exists,Temperature_coverage_%,Temperature_non_null,Temperature_col_exists,RH_coverage_%,RH_non_null,RH_col_exists,Solar Rad_coverage_%,Solar Rad_non_null,Solar Rad_col_exists,BP_coverage_%,BP_non_null,BP_col_exists,Rain_coverage_%,Rain_non_null,Rain_col_exists,V Wind Speed_coverage_%,V Wind Speed_non_null,V Wind Speed_col_exists
+Agrabad,54839,65.6,35975,True,78.3,42946,True,79.5,43613,True,78.2,42893,True,83.7,45904,True,88.0,48276,True,88.4,48481,True,49.5,27142,True,8.0,4401,True
+Baira,36886,86.9,32042,True,4.5,1663,True,5.5,2022,True,31.7,11695,True,28.7,10579,True,18.0,6628,True,28.8,10608,True,21.2,7825,True,9.8,3609,True
+Darus Salam,61023,88.9,54268,True,78.8,48095,True,79.3,48384,True,74.4,45374,True,83.0,50651,True,76.7,46822,True,75.6,46138,True,48.6,29678,True,7.0,4288,True
+East Chandana,13867,76.6,10621,True,0.0,0,True,0.0,0,True,50.5,7009,True,50.6,7013,True,31.1,4310,True,50.6,7013,True,0.9,119,True,17.9,2478,True
+Farmgate,63215,79.5,50243,True,57.1,36108,True,57.5,36378,True,66.0,41702,True,60.6,38305,True,47.1,29769,True,33.5,21150,True,44.1,27909,True,12.1,7655,True
+Khanpur,56458,84.9,47927,True,49.9,28169,True,51.5,29085,True,17.4,9824,True,39.0,22019,True,8.3,4688,True,31.6,17845,True,38.7,21860,True,0.0,0,True
+Khulshi,37583,64.3,24175,True,26.8,10059,True,26.8,10059,True,49.9,18748,True,34.7,13036,True,50.9,19120,True,32.8,12346,True,15.5,5820,True,3.4,1280,True
+Red Crescent Office,51287,82.4,42283,True,86.7,44445,True,84.6,43369,True,86.0,44089,True,86.4,44289,True,86.3,44261,True,79.1,40591,True,41.3,21183,True,0.0,0,True
+Sopura,61532,91.8,56511,True,21.0,12907,True,21.1,12971,True,49.9,30699,True,49.0,30143,True,21.2,13042,True,30.8,18980,True,5.8,3548,True,0.0,0,True
+Uttar Bagura Road,58387,76.4,44608,True,81.7,47679,True,81.6,47667,True,88.9,51891,True,89.1,52049,True,88.1,51441,True,76.4,44614,True,20.6,12009,True,13.9,8091,True

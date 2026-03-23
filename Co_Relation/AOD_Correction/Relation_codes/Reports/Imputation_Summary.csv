@@ -1,0 +1,17 @@
+Station,Variable,NaN_before,Short_filled,Medium_filled,Long_unfilled,NaN_after
+Agrabad,PM2.5,4,4,0,0,0
+Agrabad,AOD,4,4,0,0,0
+Agrabad,RH,1,1,0,0,0
+Agrabad,Temperature,1,1,0,0,0
+Darus Salam,PM2.5,2,2,0,0,0
+Darus Salam,AOD,11,11,0,0,0
+Darus Salam,RH,8,2,6,0,0
+Darus Salam,Temperature,7,1,6,0,0
+Darus Salam,Wind Speed,98,0,0,98,98
+Red Crescent Office,PM2.5,2,2,0,0,0
+Red Crescent Office,AOD,10,10,0,0,0
+Red Crescent Office,Temperature,1,1,0,0,0
+Uttar Bagura Road,PM2.5,2,2,0,0,0
+Uttar Bagura Road,AOD,4,4,0,0,0
+Uttar Bagura Road,Temperature,2,2,0,0,0
+Uttar Bagura Road,Wind Speed,56,26,5,25,25

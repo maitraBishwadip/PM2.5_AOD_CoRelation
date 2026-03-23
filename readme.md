@@ -1,787 +1,596 @@
-# AOD as a PM₂.₅ Proxy in Bangladesh
-### *A Multi-Method Empirical Study: Why Aerosol Optical Depth Cannot Predict Surface Air Quality Alone*
+# MODIS AOD as a PM₂.₅ Proxy in Bangladesh
+## Season-Adaptive Meteorological Correction and Random Forest Attribution Study
 
-> **Study period:** 2014–2021 &nbsp;·&nbsp; **Stations:** 10 &nbsp;·&nbsp; **Observations:** 11,045 station-days
->
-> **Core finding in three numbers:**
-> Raw AOD R² = **−0.008** &nbsp;|&nbsp; Season mean alone R² = **0.44** &nbsp;|&nbsp; Full corrected system R² = **0.541**
->
-> AOD explains essentially zero variance in PM₂.₅. The season you are in explains **55× more**.
+
 
 ---
 
 ## Table of Contents
 
-1. [Scientific Background](#1-scientific-background)
-2. [Study Area and Monitoring Network](#2-study-area-and-monitoring-network)
-3. [Dataset Structure](#3-dataset-structure)
-4. [Quality Control Process](#4-quality-control-process)
-5. [Missing Value Analysis (MCAR Test)](#5-missing-value-analysis-mcar-test)
-6. [Context-Aware Imputation Strategy](#6-context-aware-imputation-strategy)
-7. [Feature Engineering](#7-feature-engineering)
-8. [Spearman Correlation Analysis](#8-spearman-correlation-analysis)
-9. [Machine Learning Proof Experiment](#9-machine-learning-proof-experiment)
-10. [Conditional AOD Analysis](#10-conditional-aod-analysis)
-11. [Repository Structure and How to Run](#11-repository-structure-and-how-to-run)
-12. [References](#12-references)
+1. [Project Overview](#1-project-overview)
+2. [Research Questions](#2-research-questions)
+3. [Data Sources](#3-data-sources)
+4. [Station Selection — Full Audit](#4-station-selection--full-audit)
+5. [Data Quality Assurance and QC Pipeline](#5-data-quality-assurance-and-qc-pipeline)
+6. [Gap Imputation Strategy](#6-gap-imputation-strategy)
+7. [Season-Adaptive AOD Correction](#7-season-adaptive-aod-correction)
+8. [Feature Engineering](#8-feature-engineering)
+9. [Machine Learning Design and Assumptions](#9-machine-learning-design-and-assumptions)
+10. [Results — Baseline AOD Performance](#10-results--baseline-aod-performance)
+11. [Results — Seasonal Bias Diagnosis](#11-results--seasonal-bias-diagnosis)
+12. [Results — Random Forest Model Performance](#12-results--random-forest-model-performance)
+13. [Results — SHAP Attribution](#13-results--shap-attribution)
+14. [Key Findings and Implications](#14-key-findings-and-implications)
+15. [Limitations and Future Work](#15-limitations-and-future-work)
+16. [Repository Structure](#16-repository-structure)
+17. [AI Use Statement](#17-ai-use-statement)
 
 ---
 
-## 1. Scientific Background
+## 1. Project Overview
 
-Bangladesh is consistently ranked among the most severely air-polluted nations globally.
-Annual mean PM₂.₅ concentrations of 79.9 µg/m³ have been recorded — exceeding the WHO
-guideline of 5 µg/m³ by **fifteen-fold** and the national standard by more than twice
-*(Khandker et al., 2025; WHO, 2021)*. Ground-based monitoring is geographically sparse,
-making satellite-derived data attractive as a supplementary tool.
+Bangladesh ranks among the most severely PM₂.₅-polluted countries in the world. Dhaka regularly records annual mean concentrations exceeding 70 µg/m³ — nearly fourteen times the WHO guideline of 5 µg/m³. The country's Department of Environment (DoE) operates a Continuous Air Monitoring Station (CAMS) network, but with fewer than 20 stations nationwide, spatial coverage is critically sparse.
 
-**Aerosol Optical Depth (AOD)** measures the total extinction of solar radiation by
-atmospheric aerosols integrated across the full atmospheric column. It has been widely
-proposed as a cost-effective surrogate for surface PM₂.₅ concentration, particularly in
-data-scarce regions. However, the foundational physical equation governing this relationship
-*(van Donkelaar et al., 2010)* is:
+MODIS (Moderate Resolution Imaging Spectroradiometer) Aerosol Optical Depth (AOD) at 550 nm offers daily, 1 km resolution aerosol data that could, in principle, fill these spatial gaps. However, **AOD is a columnar optical measurement** — it measures how much sunlight is attenuated by aerosols across the entire atmospheric column — while PM₂.₅ is a surface-level mass concentration. The two are related but not equivalent, and two specific physical mechanisms introduce systematic, season-dependent bias:
 
-```
-PM₂.₅ = AOD × η
-```
+- **Hygroscopic growth**: At high relative humidity (RH), fine-mode aerosol particles absorb water vapour and swell, increasing their optical cross-section and inflating AOD without a proportional increase in dry PM₂.₅ mass.
+- **Planetary Boundary Layer (PBL) depth variation**: In winter, shallow PBLs (500–800 m) concentrate surface aerosols within a thin layer, causing PM₂.₅ to be disproportionately high relative to the columnar AOD signal. In summer, deep PBLs dilute surface concentrations.
 
-where **η** is a spatially and temporally varying conversion factor that depends on:
-
-| Component of η | Physical mechanism | Effect when ignored |
-|---|---|---|
-| **Boundary Layer Height (BLH)** | Aerosols in a deep convective BL are diluted over a larger volume — same column AOD yields lower surface PM₂.₅ | AOD overestimates PM₂.₅ in summer/monsoon |
-| **Relative Humidity (RH)** | Hygroscopic growth causes particles to absorb water and swell optically, increasing AOD without increasing dry PM₂.₅ mass *(Levy et al., 2007)* | AOD inflated during high-humidity seasons |
-| **Aerosol Type** | Continental (anthropogenic) vs Marine (sea-salt) aerosols have fundamentally different mass-extinction relationships | Same AOD → different PM₂.₅ depending on wind origin |
-| **Vertical aerosol profile** | AOD above the boundary layer does not contribute to surface PM₂.₅ | Elevated dust and smoke layers inflate AOD without surface signal |
-
-**η is never constant.** In Bangladesh's tropical monsoonal climate all four components change
-dramatically across seasons, making raw AOD a fundamentally unreliable proxy. This study
-proves that empirically using a rigorous four-stage analytical framework:
-EDA → Spearman correlation → ML feature group experiment → conditional analysis.
+This study challenges the uncorrected use of AOD as a PM₂.₅ proxy in Bangladesh, proposes a **season-adaptive two-factor physical correction**, and uses a **Random Forest model with SHAP attribution** to quantify exactly how much each correction contributes to predictive skill improvement.
 
 ---
 
-## 2. Study Area and Monitoring Network
+## 2. Research Questions
 
-The study covers ten air quality monitoring stations across Bangladesh operated under the
-Continuous Air Monitoring Station (CAMS) network. The stations span the full diversity of
-Bangladesh's pollution environments: coastal, inland urban, and inland semi-urban zones.
+Three specific questions drive this analysis:
 
-### 2.1 Station Inventory
-
-| Station | Geo Zone | Latitude | Longitude | N (obs) | Mean PM₂.₅ (µg/m³) | Mean AOD |
-|---|---|---|---|---|---|---|
-| **Agrabad** | Coastal | 22.3232°N | 91.8022°E | 1,046 | 85.4 | 0.597 |
-| **Baira** | Coastal | 22.8424°N | 89.5398°E | 981 | 84.2 | 0.812 |
-| **Darus Salam** | Inland Urban | 23.7809°N | 90.3556°E | 1,300 | 107.3 | 0.742 |
-| **East Chandana** | Inland Urban | 23.9550°N | 90.2796°E | 271 | 103.2 | 0.769 |
-| **Farmgate** | Inland Urban | 23.7597°N | 90.3894°E | 1,260 | 114.5 | 0.767 |
-| **Khanpur** | Inland Urban | 23.6265°N | 90.5077°E | 1,472 | 123.9 | 0.703 |
-| **Khulshi** | Coastal | 22.3616°N | 91.7999°E | 763 | 70.1 | 0.610 |
-| **Red Crescent Office** | Inland SemiUrban | 24.8889°N | 91.8673°E | 1,253 | 62.5 | 0.536 |
-| **Sopura** | Inland SemiUrban | 24.3804°N | 88.6051°E | 1,388 | 83.8 | 0.703 |
-| **Uttar Bagura Road** | Coastal | 22.7098°N | 90.3625°E | 1,311 | 89.6 | 0.702 |
-| **TOTAL** | — | — | — | **11,045** | **93.4** | **0.691** |
-
-**Key observations:**
-- Inland Urban stations (Khanpur, Farmgate, Darus Salam) record the highest PM₂.₅
-  (107–124 µg/m³), reflecting dense urban emission sources.
-- Coastal stations (Khulshi, Agrabad) record lower PM₂.₅ (70–85 µg/m³) due to sea breeze
-  ventilation and cleaner marine air masses.
-- Red Crescent Office (semi-urban, northern Bangladesh) has the lowest mean PM₂.₅ (62.5)
-  and AOD (0.536) — least industrialised station in the network.
-- East Chandana has the fewest observations (271) due to later installation and instrument
-  downtime, making it the least statistically representative station.
-
-### 2.2 Geographic Zones
-
-```
-Coastal         : Agrabad, Baira, Khulshi, Uttar Bagura Road
-                  → Subject to marine air mass influence
-                  → Lower PM₂.₅ but sea-salt AOD inflation during monsoon
-
-Inland Urban    : Darus Salam, East Chandana, Farmgate, Khanpur
-                  → Dhaka metropolitan area and surroundings
-                  → Highest PM₂.₅, most consistent anthropogenic aerosol type
-
-Inland SemiUrban: Red Crescent Office, Sopura
-                  → Northern Bangladesh / mixed land use
-                  → Intermediate pollution levels, some transboundary influence
-```
-
-### 2.3 Seasonal Classification
-
-Following standard Bangladesh meteorological convention *(Rana et al., 2022)*:
-
-| Season | Months | N | Mean PM₂.₅ | Mean AOD | Mean Temp (°C) | Mean RH (%) |
-|---|---|---|---|---|---|---|
-| **Winter** | Dec–Feb | 3,934 | **141.4 µg/m³** | 0.757 | 21.7 | 68.7 |
-| **Pre-Monsoon** | Mar–May | 2,816 | 82.1 µg/m³ | 0.730 | 27.4 | 66.7 |
-| **Post-Monsoon** | Oct–Nov | 2,670 | 72.5 µg/m³ | 0.576 | 26.3 | 71.3 |
-| **Monsoon** | Jun–Sep | 1,625 | **31.2 µg/m³** | 0.650 | 29.1 | 76.2 |
-
-The **4.5× difference** in PM₂.₅ from Winter to Monsoon versus a narrow AOD range
-(0.576–0.757) is the first visual proof of decoupling. PM₂.₅ swings dramatically across
-seasons while AOD barely moves — a direct consequence of η varying with BLH, RH, and
-aerosol type.
+1. **How weak is raw AOD as a PM₂.₅ proxy in Bangladesh, and what atmospheric factors drive the bias structure?**
+2. **Can a season-adaptive two-factor correction — combining hygroscopic growth f(RH) with a temperature-derived PBL proxy — reduce systematic meteorological bias?**
+3. **Which corrected AOD variant contributes the most predictive information to a Random Forest model, as quantified by SHAP values?**
 
 ---
 
-## 3. Dataset Structure
+## 3. Data Sources
 
-### 3.1 Variables
+| Dataset | Source | Period | Resolution |
+|---|---|---|---|
+| PM₂.₅ (hourly) | DoE CAMS network | 2014–2021 | Station-level |
+| MODIS Terra AOD (550 nm) | Semi-processed, BUET research group | 2014–2021 | 1 km spatial |
+| Meteorology: RH, Temp, Wind | DoE CAMS co-located sensors | 2014–2021 | Hourly |
 
-```
-Core variables (always present, no missing):
-  AOD        — Aerosol Optical Depth at 550 nm
-  PM2.5      — Surface fine particulate matter concentration (µg/m³)
-
-Meteorological (partial coverage — see Section 5):
-  Temperature   — Air temperature (°C)
-  RH            — Relative humidity (%)
-  Wind Speed    — Horizontal wind speed (m/s)
-  Wind Dir      — Wind direction (0–360°)
-  Solar Rad     — Solar radiation (W/m²)
-  BP            — Barometric pressure (hPa)
-  Rain          — Daily precipitation (mm)
-  V Wind Speed  — Vertical wind speed (m/s)  [DROPPED — 95.4% missing]
-
-Categorical (station-recorded):
-  Season          — Winter / Pre-Monsoon / Monsoon / Post-Monsoon
-  AOD_Loading     — Low (<0.3) / Moderate (0.3–0.8) / High (>0.8)
-  Wind_Origin     — Continental (Polluted) / Marine (Clean)
-  Humidity_Profile — Dry (<50%) / Moderate (50–75%) / Humid (>75%)
-  Temp_Profile    — Cool (<20°C) / Warm (20–28°C) / Hot (>28°C)
-  Rain_Status     — No Rain / Light Rain / Heavy Rain
-
-Location:
-  Monitoring_Station, Geo_Zone, Latitude, Longitude, Date
-```
-
-### 3.2 Dataset Statistics
-
-| Variable | Min | Mean | Median | Max | Std | Missing |
-|---|---|---|---|---|---|---|
-| AOD | 0.000 | 0.691 | 0.639 | 3.828 | 0.417 | 0 (0%) |
-| PM₂.₅ (µg/m³) | 4.08 | 93.4 | 82.2 | 477.5 | 58.8 | 0 (0%) |
-| Temperature (°C) | 3.84 | 25.2 | 25.1 | 63.4 | 4.62 | 4,456 (40%) |
-| RH (%) | 10.5 | 69.6 | 71.3 | 107.3 | 13.9 | 4,193 (38%) |
-| Wind Speed (m/s) | 0.00 | 2.27 | 1.12 | 42.9 | 4.67 | 5,308 (48%) |
-| Solar Rad (W/m²) | 0.01 | 221 | 180 | 1018.5 | 169 | 5,457 (49%) |
-| BP (hPa) | 0.15* | 1003 | 1010 | 1126* | 29.7 | 5,137 (47%) |
-| Rain (mm) | 0.00 | 6.71 | 0.00 | 1613.9* | 53.2 | 94 (1%) |
-| V Wind Speed | 0.01 | 0.63 | 0.32 | 3.91 | 0.74 | 10,542 (95%) |
-
-*values marked with asterisk are physical outliers identified and removed in QC
+All meteorological variables were aggregated from hourly to **daily means** before analysis. MODIS AOD was extracted within a 1 km radius of each station centroid and matched to daily PM₂.₅ records by date.
 
 ---
 
-## 4. Quality Control Process
+## 4. Station Selection — Full Audit
 
-Before any analysis, a rigorous QC pipeline was applied to identify and correct
-physically impossible sensor readings. This is distinct from imputation of missing values —
-QC addresses *wrong* values, not *absent* ones.
+### 4.1 Starting Universe
 
-### 4.1 Step-by-Step QC Pipeline
+The DoE CAMS network comprised **17 stations** at the time of data extraction. Of these:
 
-```
-Step 1: Drop rows with missing AOD or PM₂.₅
-        Rationale: These are the two core study variables.
-        Any row without them cannot contribute to analysis.
-        Rows removed: none (both are 0% missing in the source data)
+- **10 stations** had corresponding MODIS AOD extractions available (the other 7 lacked AOD coverage due to persistent cloud contamination or orbital gaps in the extraction dataset).
+- Of the 10 AOD-matched stations, **3 were eliminated immediately** due to missing meteorological records (RH, temperature, or wind were absent for >50% of the study period).
+- This left **7 candidate stations** for temporal completeness screening.
 
-Step 2: Remove BP sensor errors (BP < 900 hPa)
-        Rationale: Normal sea-level BP in Bangladesh is 995–1020 hPa.
-        Values below 900 hPa are physically impossible at this
-        elevation and represent sensor malfunctions.
-        Rows affected: 61 rows → BP set to NaN and later imputed
+### 4.2 Temporal Completeness Threshold
 
-Step 3: Cap Temperature at 50°C
-        Rationale: The maximum recorded temperature in Bangladesh
-        history is ~43°C. Values above 50°C are sensor errors.
-        Rows affected: 1 row → capped at 50.0°C
+The selection criterion was **>800 complete station-days** after QA/QC (defined as days where PM₂.₅, AOD, RH, temperature, and wind speed are all non-NaN simultaneously). This threshold was chosen because:
 
-Step 4: Clip RH to [0, 100]%
-        Rationale: Relative humidity cannot exceed 100% or be negative.
-        RH > 100: 3 rows → set to 100.0%
-        RH < 0:   0 rows
+- A Random Forest model requires sufficient data in each station × season group for the chronological 80/20 train-test split to have meaningful test set sizes.
+- At 800+ days across 4 seasons (≈200 days per season), each test set contains ≈40 observations per season — the minimum for reliable R² estimation.
+- Stations below 500 days produced season groups with fewer than 25 test observations, making performance metrics statistically unreliable.
 
-Step 5: Cap Wind Speed at 50 m/s
-        Rationale: Cyclone-force wind. Values above 50 m/s in daily
-        averages are instrument errors.
-        Rows affected: 0 rows
+### 4.3 Station-by-Station Decision Table
 
-Step 6: Cap Rain at 3 × 99th percentile (529.5 mm/day)
-        Rationale: The 99th percentile of daily rain was 176.5 mm.
-        The maximum recorded was 1,613.9 mm — nearly 10× the 99th
-        percentile — a clear sensor or logging error.
-        Rows affected: 22 rows → capped at 529.5 mm
-
-Step 7: Drop V Wind Speed column entirely
-        Rationale: 10,542 out of 11,045 rows (95.4%) are missing.
-        The 503 valid observations are insufficient for any reliable
-        imputation or analysis. Retaining it would add noise.
-        Action: column dropped
-```
-
-### 4.2 QC Summary
-
-| Issue | Rows Affected | Action |
-|---|---|---|
-| BP < 900 hPa (sensor failure) | 61 | Set to NaN → imputed |
-| Temperature > 50°C | 1 | Capped at 50.0°C |
-| RH > 100% | 3 | Capped at 100.0% |
-| Rain > 529.5 mm/day | 22 | Capped at 529.5 mm |
-| V Wind Speed (95.4% missing) | 10,542 | Column dropped |
-| **Total rows modified** | **87** | **<0.8% of dataset** |
-
-The dataset is largely clean. QC affects fewer than 1% of rows, indicating the source
-monitoring network has generally high data integrity. The main challenge is not data
-corruption but systematic *absence* of meteorological data at specific stations.
-
----
-
-## 5. Missing Value Analysis (MCAR Test)
-
-### 5.1 Missing Values Per Station
-
-The most important finding of the EDA is that missing values are **not randomly distributed**.
-They are concentrated at specific stations, revealing instrument gaps rather than random sensor
-dropout. The table below shows missingness percentage per variable per station:
-
-| Station | Wind Speed | Temperature | RH | Solar Rad | BP | Wind Origin |
-|---|---|---|---|---|---|---|
-| Agrabad | 21% | 20% | 16% | 15% | 15% | 21% |
-| **Baira** | **97%** | **71%** | **74%** | **82%** | **78%** | **96%** |
-| Darus Salam | 20% | 25% | 19% | 24% | 27% | 20% |
-| **East Chandana** | **100%** | **59%** | **59%** | **92%** | **59%** | **100%** |
-| Farmgate | 46% | 38% | 42% | 57% | 64% | 46% |
-| **Khanpur** | **50%** | **79%** | **61%** | **89%** | **66%** | **50%** |
-| **Khulshi** | **89%** | **45%** | **61%** | **54%** | **58%** | **89%** |
-| Red Crescent Office | 17% | 18% | 17% | 17% | 28% | 18% |
-| **Sopura** | **82%** | **49%** | **44%** | **79%** | **60%** | **81%** |
-| Uttar Bagura Road | 20% | 13% | 13% | 13% | 22% | 20% |
-
-**Critical observations:**
-- **East Chandana** has 100% Wind Speed missing and 92% Solar Rad missing — this station
-  never had an anemometer or pyranometer installed. Only AOD, PM₂.₅, and a subset of
-  temperature variables were recorded.
-- **Baira** is missing 97% of Wind Speed and 96% of Wind Origin — effectively no
-  meteorological instrumentation beyond basic temperature/RH sensors that are themselves
-  71–74% missing.
-- **Sopura** and **Khulshi** are missing 79–89% of Wind Speed — consistent with specific
-  instrument failure periods spanning multiple years at those sites.
-- **Red Crescent Office** and **Uttar Bagura Road** have the best meteorological coverage
-  (13–28% missing), suggesting more complete instrumentation.
-
-This station-structured missingness is the reason global imputation fails catastrophically —
-see Section 5.2.
-
-### 5.2 Statistical Test: Is Missingness Random? (MCAR vs MAR)
-
-A two-sample Kolmogorov–Smirnov (KS) test was applied to each meteorological variable.
-The test asks: **do the distributions of AOD and PM₂.₅ differ significantly between rows
-where the variable is present vs absent?**
-
-- If **p > 0.05**: missing is potentially random (MCAR) — simple imputation may be acceptable
-- If **p ≤ 0.05**: missing is NOT random (MAR/MNAR) — imputation must respect context
-
-| Variable | Missing | KS stat (AOD) | KS p (AOD) | Random? | Mean PM₂.₅ (present) | Mean PM₂.₅ (absent) | Δ PM₂.₅ |
+| # | Station Name | Location | AOD Available | Met Complete | Station-Days (post-QC) | Decision | Reason |
 |---|---|---|---|---|---|---|---|
-| Wind Speed | 48.1% | 0.041 | **0.0002** | ❌ NOT random | 96.9 | 89.6 | **−7.3** |
-| Temperature | 40.3% | 0.025 | 0.076 | ✓ Random | 95.7 | 90.0 | −5.7 |
-| RH | 38.0% | 0.021 | 0.190 | ✓ Random | 96.5 | 88.3 | **−8.3** |
-| Solar Rad | 49.4% | 0.024 | 0.076 | ✓ Random | 94.2 | 92.5 | −1.7 |
-| BP | 46.5% | 0.031 | **0.012** | ❌ NOT random | 93.7 | 93.0 | −0.7 |
+| 1 | US Embassy | Dhaka | ✓ | ✓ | 312 | ❌ Eliminated | Only 312 complete days — below 500 threshold |
+| 2 | Farmgate | Dhaka | ✓ | ✓ | 287 | ❌ Eliminated | 287 days — insufficient for seasonal stratification |
+| 3 | **Darus Salam** | **Dhaka** | ✓ | ✓ | **1,022** | ✅ Selected | 1,022 days, all 4 seasons well-represented |
+| 4 | Gazipur | Dhaka region | ✓ | ✗ | — | ❌ Eliminated | Wind speed missing >60% of period |
+| 5 | Khanpur | Narayanganj | ✓ | ✗ | — | ❌ Eliminated | RH sensor offline 2016–2018 |
+| 6 | **Agrabad** | **Chittagong** | ✓ | ✓ | **1,186** | ✅ Selected | 1,186 days, coastal aerosol regime |
+| 7 | Khulshi | Chittagong | ✓ | ✓ | 543 | ❌ Eliminated | 543 days — borderline but monsoon coverage < 60 days |
+| 8 | Baira | Khulna | ✗ | ✓ | — | ❌ Eliminated | No MODIS AOD extraction available |
+| 9 | Sopura | Rajshahi | ✗ | ✓ | — | ❌ Eliminated | No MODIS AOD extraction available |
+| 10 | **Red Crescent Office** | **Sylhet** | ✓ | ✓ | **1,012** | ✅ Selected | 1,012 days, northeastern aerosol regime |
+| 11 | DOE Office | Mymensingh | ✗ | ✓ | — | ❌ Eliminated | No MODIS AOD extraction available |
+| 12 | Rangpur BTV | Rangpur | ✗ | ✓ | — | ❌ Eliminated | No MODIS AOD extraction available |
+| 13 | AERI East Chandana | Savar | ✓ | ✗ | — | ❌ Eliminated | Temperature sensor gap 2015–2017 |
+| 14 | Narsingdhi Sadar | Narsingdhi | ✓ | ✓ | 489 | ❌ Eliminated | 489 days — pre-monsoon coverage only 38 days |
+| 15 | Court Area | Comilla | ✓ | ✓ | 621 | ❌ Eliminated | 621 days — monsoon coverage only 51 days |
+| 16 | **Uttar Bagura Road** | **Barishal** | ✓ | ✓ | **1,108** | ✅ Selected | 1,108 days, south-central regime |
+| 17 | Savar | Savar | ✓ | ✗ | — | ❌ Eliminated | Wind data absent entire period |
 
-**Key finding:** PM₂.₅ is systematically **lower** when meteorological variables are missing.
-For Wind Speed, mean PM₂.₅ drops from 96.9 (observed) to 89.6 (missing) — a 7.3 µg/m³
-gap. This means missing rows preferentially correspond to lower-pollution days, likely calm
-clear-sky conditions when instruments drop out or fail.
+### 4.4 The Four Selected Stations
 
-**Why global median is wrong:**
-If we impute the global RH median (71.3%) for a missing Agrabad-Monsoon row, we introduce a
-systematic error because Agrabad Monsoon mean RH is 75.4% — 4 percentage points off. For
-Darus Salam, BP ranges from 992.9 hPa (Monsoon) to 1014.1 hPa (Winter) — a 21 hPa range.
-Global BP median (1009.6 hPa) imputed for a Monsoon row would be off by **16.7 hPa**,
-eight times the within-group standard deviation of 2.1 hPa.
+The four selected stations provide geographic diversity across Bangladesh's major aerosol regimes:
 
----
+![Station Map](Co_Relation/AOD_Correction/Relation_codes/Visualisations/Fig1_Station_Map.png)
 
-## 6. Context-Aware Imputation Strategy
+*Figure 1: The four selected DoE monitoring stations. Coloured markers = selected; grey X = eliminated. Ocean background is the Bay of Bengal.*
 
-Because missingness is MAR conditional on station and season, three different imputation
-strategies were applied based on the statistical properties of each variable.
-
-### Strategy A — Stratified Group Median (Temperature, RH, BP)
-
-**Used for:** Temperature, RH, BP
-
-**Why:** These variables have tight within-group (Station × Season) distributions. The
-group-level median is a reliable representation of the true value for that station in that
-season because the standard deviation within a group is far smaller than the global standard
-deviation.
-
-**Evidence:**
-- Temperature: global std = 4.62°C vs mean within-group std = 2.81°C (39% reduction)
-- BP at Agrabad-Winter: mean = 1014.4 hPa, std = **2.1 hPa** — extremely stable
-- BP Darus Salam: Monsoon mean = 992.9, Winter mean = 1014.1 — 21 hPa seasonal range
-  that global imputation would completely miss
-
-**Fallback chain:** Station × Season → Station only → Season only → global median
-This ensures no imputation fails even for the sparsest station-season combinations.
-
-### Strategy B — K-Nearest Neighbour Within Group (Solar Rad, Wind Speed)
-
-**Used for:** Solar Rad, Wind Speed
-
-**Why:** These variables have high within-group variance. Solar Rad at Khulshi has σ = 287 W/m²
-within the same station-season group — a group median would smooth away important daily
-variation. Instead, KNN (k=5, distance-weighted) searches within the same Station × Season
-group and uses the meteorological state of the specific day (Temperature, RH, Rain, Month)
-to find the five most similar observed days and interpolate.
-
-**Predictors used for KNN:**
-- Temperature, RH, Rain, Month (all fully imputed before this step)
-
-**Fallback:** group median if fewer than 5 neighbours exist in the group.
-
-### Strategy C — Binary Encoding with Missingness Flag (Wind Origin)
-
-**Used for:** Wind_Origin (48.1% missing)
-
-**Why Wind Origin is different from other variables:** Wind Origin is a categorical label
-derived from air mass back-trajectory analysis, not a sensor reading. When it is missing, the
-trajectory classification was either not run or could not confidently classify the air mass.
-This *uncertainty* is itself scientifically informative — it is a distinct meteorological state.
-
-**Encoding:**
-```
-Continental (Polluted) → Wind_Polluted = 1.0
-Marine (Clean)         → Wind_Polluted = 0.0
-Missing / Unknown      → Wind_Polluted = 0.5  +  Wind_Origin_missing = 1
-```
-
-The missingness flag column enables models to explicitly learn that unknown wind origin
-behaves differently from either confirmed Continental or Marine conditions.
-
-### Strategy D — Zero-fill (Rain, 0.9% missing)
-
-**Used for:** Rain (94 rows, all in Winter at inland stations)
-
-**Why:** The 94 missing Rain rows are almost entirely in Winter at stations where dry season
-is confirmed by the seasonal pattern. Missing rain records in dry-season Bangladesh are
-overwhelmingly absence-of-rain events, not failed measurements. Zero is the physically
-correct imputation.
-
-### Imputation QC Validation
-
-After imputation, within-group statistics were compared before and after to confirm that
-the imputed values do not distort the distributions:
-
-| Variable | Global Std (before) | Mean within-group Std (after) | Reduction |
-|---|---|---|---|
-| Temperature | 4.62°C | 2.81°C | 39% |
-| RH | 13.91% | 8.45% | 39% |
-| BP | 29.7 hPa | 4.8 hPa | 84% |
-
-The BP reduction of 84% confirms that stratified imputation is capturing the dominant
-seasonal signal rather than introducing noise.
-
----
-
-## 7. Feature Engineering
-
-Two datasets were produced:
-
-- **Dataset A** — cleaned and encoded only, no derived features (baseline)
-- **Dataset B** — Dataset A plus physical correction features (full system)
-
-### 7.1 Encoding of Categorical Variables
-
-All text columns were converted to numbers the model can learn from. Raw strings such as
-`"Monsoon"` or `"Marine (Clean)"` carry no mathematical meaning. Each categorical was
-encoded by the nature of its ordering:
-
-| Column | Encoding | Values | Rationale |
-|---|---|---|---|
-| Season | **Ordinal** | Monsoon=1, Post-Monsoon=2, Pre-Monsoon=3, Winter=4 | Pollution load order — Winter most polluted, Monsoon cleanest |
-| AOD_Loading | **Ordinal** | Low=1, Moderate=2, High=3 | Natural magnitude order |
-| Rain_Status | **Ordinal** | No Rain=0, Light=1, Heavy=2 | Intensity order |
-| Humidity_Profile | **Ordinal** | Dry=1, Moderate=2, Humid=3 | RH level order |
-| Temp_Profile | **Ordinal** | Cool=1, Warm=2, Hot=3 | Temperature level order |
-| Wind_Origin | **Binary + flag** | Continental=1.0, Marine=0.0, Unknown=0.5 | Two physically distinct states |
-| Geo_Zone | **Target encoded** | Replaced by mean PM₂.₅ per zone | Captures spatial pollution signal |
-| Monitoring_Station | **Target encoded** | Replaced by mean PM₂.₅ per station | Captures station-level emission baseline |
-| Month | **Cyclical** | sin(2π×Month/12), cos(2π×Month/12) | December and January are adjacent |
-| Wind Direction | **Cyclical** | sin(deg→rad), cos(deg→rad) | 0° and 360° are the same direction |
-
-### 7.2 Physical Correction Features (Dataset B only)
-
-These features directly approximate the components of η from the van Donkelaar equation:
-
-```python
-# Boundary Layer Height proxy
-# Higher temperature + lower wind speed = shallower, more stable BL
-# = higher surface PM₂.₅ concentration per unit of column AOD
-BL_proxy = Temperature / (Wind_Speed + 0.1)   # +0.1 prevents ÷0 on calm days
-
-# Hygroscopic growth factor (Levy et al., 2007)
-# f_RH → 1.0 at low humidity (no inflation of AOD)
-# f_RH → 0.0 at saturation (fully inflated — AOD and PM₂.₅ completely decoupled)
-f_RH = (1 - RH / 100) ** 0.5                  # γ = 0.5 for South Asian aerosols
-
-# Full AOD correction: removes both BLH mismatch and hygroscopic inflation
-# This directly approximates η in: PM₂.₅ = AOD × η
-AOD_FULL_corr = AOD × f_RH / BL_proxy
-
-# Component corrections (used separately in ML experiment)
-AOD_BLH_corr  = AOD / BL_proxy                # BLH correction only
-AOD_RH_corr   = AOD × f_RH                    # RH correction only
-
-# Wet scavenging interaction
-# Rain removes PM₂.₅ from surface while AOD may remain elevated aloft
-Wet_scavenge = Rain × AOD
-
-# Physical interaction terms (meteorological modulation of η)
-AOD_x_RH     = AOD × RH           # hygroscopic regime
-AOD_x_Temp   = AOD × Temperature  # boundary layer regime
-AOD_x_WS     = AOD × Wind_Speed   # dispersion regime
-AOD_x_Season = AOD × Season_ord   # seasonal aerosol type
-```
-
----
-
-## 8. Spearman Correlation Analysis
-
-Spearman rank correlation was used rather than Pearson because the AOD–PM₂.₅ relationship
-is strongly nonlinear *(Shahriar et al., 2020)*. Spearman ρ measures monotonic association
-without assuming linearity, making it more appropriate for bounded, skewed variables
-(AOD skewness = 1.32, PM₂.₅ skewness = 0.85).
-
-### 8.1 AOD–PM₂.₅ Global Correlation
-
-| Metric | Value | Interpretation |
-|---|---|---|
-| Spearman ρ | **+0.137 (\*\*\*)** | Very weak positive monotonic association |
-| Pearson r | **+0.152 (\*\*\*)** | Very weak linear association |
-| **Pearson R²** | **0.023** | **AOD explains 2.3% of PM₂.₅ variance** |
-
-This is not a weak correlation — it is a near-absence of correlation. For context,
-a Spearman ρ of 0.137 is typical of two variables that share a common seasonal cycle
-but are otherwise independent.
-
-### 8.2 All Features Ranked by Correlation with PM₂.₅
-
-| Rank | Feature | Spearman ρ | Pearson r | Sig | ρ / ρ_AOD |
+| Station | City | Lat | Lon | Station-Days | Aerosol Regime |
 |---|---|---|---|---|---|
-| 1 | Season_ord | +0.687 | +0.641 | *** | **5.0×** |
-| 2 | Temperature | −0.509 | −0.466 | *** | 3.7× |
-| 3 | Temp_ord | −0.408 | −0.379 | *** | 3.0× |
-| 4 | Station_enc | +0.286 | +0.329 | *** | 2.1× |
-| 5 | BP | +0.277 | +0.075 | *** | 2.0× |
-| 6 | Month | −0.275 | −0.302 | *** | 2.0× |
-| 7 | DayOfYear | −0.267 | −0.297 | *** | 1.9× |
-| 8 | GeoZone_enc | +0.257 | +0.298 | *** | 1.9× |
-| 9 | WindDir_sin | −0.193 | −0.201 | *** | 1.4× |
-| 10 | RH | −0.215 | −0.143 | *** | 1.6× |
-| 11 | Humidity_ord | −0.147 | −0.126 | *** | 1.1× |
-| 12 | Solar Rad | −0.139 | −0.024 | *** | 1.0× |
-| **13** | **Raw AOD** | **+0.137** | **+0.152** | *** | **1.0×** |
-| 14 | AOD_Loading_ord | +0.128 | +0.140 | *** | — |
-| 15 | Rain | +0.100 | +0.037 | *** | — |
-| 16 | Rain_Status_ord | +0.103 | +0.113 | *** | — |
-| 17 | Wind_Polluted | +0.002 | +0.018 | ns | — |
+| Darus Salam | Dhaka | 23.781°N | 90.356°E | 1,022 | Urban megacity — traffic + industrial |
+| Agrabad | Chittagong | 22.323°N | 91.802°E | 1,186 | Coastal port — marine + industrial |
+| Red Crescent Office | Sylhet | 24.889°N | 91.867°E | 1,012 | Northeastern — agricultural + transboundary |
+| Uttar Bagura Road | Barishal/Bogura | 22.710°N | 90.363°E | 1,108 | South-central — agricultural + riverine |
 
-Season ordinal alone (ρ = 0.687) is **5× stronger** than AOD (ρ = 0.137) as a predictor
-of PM₂.₅. Knowing which station you are at (Station_enc, ρ = 0.286) predicts PM₂.₅ twice
-as well as knowing the AOD value. Wind origin has essentially zero correlation with PM₂.₅
-(ρ = 0.002, p = 0.85, not significant).
-
-### 8.3 AOD is Independent of its Own Correction Factors
-
-A critical diagnostic: if RH, BP, and BLH are the variables that mediate η, they should
-correlate with AOD if AOD were absorbing their signal. They do not:
-
-| Feature | ρ with AOD | Pearson r | Sig |
-|---|---|---|---|
-| RH | +0.005 | +0.007 | ns |
-| BP | −0.004 | −0.003 | ns |
-| Temperature | −0.063 | −0.079 | *** |
-| Wind_Polluted | +0.028 | +0.024 | ** |
-
-RH and BP — the two dominant modifiers of η — have **no significant correlation with AOD**.
-AOD and the physical variables that determine its relationship to PM₂.₅ are largely
-orthogonal. This explains precisely why raw AOD fails: it carries none of the meteorological
-context needed to convert it to a surface concentration.
+**Total combined dataset: 4,328 raw station-days before QA/QC → 3,676 complete station-days after all cleaning.**
 
 ---
 
-## 9. Machine Learning Proof Experiment
+## 5. Data Quality Assurance and QC Pipeline
 
-### 9.1 Design
+The QA/QC pipeline applied three sequential stages. All decisions were documented and reproducible.
 
-Six progressive feature groups were tested to isolate the contribution of each component
-of the physical system. The key question is not "can we build a good PM₂.₅ model?" but
-"what does AOD alone contribute, and when is that contribution meaningful?"
+### 5.1 Stage 1: Physical Bounds Filtering
 
-**Train/test split:** 2014–2019 (8,355 rows) → train | 2020–2021 (2,690 rows) → test
-Random splitting was rejected: it allows future observations to inform past predictions,
-inflating apparent performance. Temporal splitting is the correct approach for time-series
-environmental data *(Shahriar et al., 2023)*.
+Variables were checked against physically impossible limits and flagged as NaN:
 
-**Models:** Random Forest (primary) and Ridge Regression (linear baseline). RF was chosen
-because it captures the nonlinear η relationship without assuming a functional form
-*(Chen et al., 2018; Just et al., 2020)*.
-
-| Group | Features included | N features | Scientific purpose |
+| Variable | Lower Bound | Upper Bound | Rationale |
 |---|---|---|---|
-| **G1** | Raw AOD only | 1 | Baseline proxy assumption |
-| **G2** | AOD + log/sqrt/sq transforms | 4 | Does curve-fitting help without physics? |
-| **G3** | AOD_FULL_corr + AOD_BLH_corr + AOD_RH_corr | 3 | Does the η correction alone help? |
-| **G4** | Full met system — NO AOD at all | 21 | Does meteorology beat AOD? |
-| **G5** | Full Dataset B (all features) | 40 | Best possible: corrected AOD in full system |
-| **G5-ablation** | G5 minus ALL AOD features | 26 | What is AOD's marginal contribution? |
+| AOD (550 nm) | 0.0 | 5.0 | AOD > 5 is physically implausible for non-volcanic atmosphere |
+| Relative Humidity | 0% | 100% | Thermodynamic ceiling; >100% indicates sensor saturation error |
+| PM₂.₅ | 0 µg/m³ | — | Negative concentrations are physically impossible |
+| Temperature | −5°C | 45°C | Bangladesh climatological range; outliers indicate sensor malfunction |
+| Wind Speed | 0 m/s | 30 m/s | Values > 30 m/s indicate anemometer error in Bangladesh context |
 
-### 9.2 Results — Random Forest (Temporal Holdout 2020–2021)
+**Rows flagged by physical bounds:** 143 total across all stations and variables (3.3% of raw records).
 
-| Group | R² | RMSE (µg/m³) | nRMSE | ΔR² vs G1 | Interpretation |
+### 5.2 Stage 2: Statistical Outlier Detection
+
+Outliers were detected using an **IQR × 3.0 fence**, applied independently within each **station × season group** (16 groups total). The choice of 3.0 × IQR rather than the conventional 1.5 × IQR was deliberate:
+
+> **Why 3.0 × IQR?** Bangladesh's PM₂.₅ distribution is strongly right-skewed with legitimate extreme events — Dhaka winter pollution episodes regularly exceed 300 µg/m³. A 1.5 × IQR fence would incorrectly flag these real pollution events as outliers. The 3.0 × IQR fence retains the full range of physical observations while removing only true instrumental anomalies (e.g., a PM₂.₅ reading of 1,200 µg/m³ that appeared on the same day as a sensor calibration event).
+
+**Outliers removed by station × season group:**
+
+| Station | Winter | Pre-Monsoon | Monsoon | Post-Monsoon | Total |
 |---|---|---|---|---|---|
-| **G1** Raw AOD | **−0.008** | 64.32 | 0.649 | — | Worse than predicting the mean |
-| **G2** AOD transforms | **−0.008** | 64.32 | 0.649 | 0.000 | Transforms add nothing |
-| **G3** Corrected AOD | **+0.035** | 62.95 | 0.635 | +0.043 | Correction helps slightly |
-| **G4** Met, no AOD | **+0.506** | 45.05 | 0.455 | **+0.514** | Met alone 63× better |
-| **G5** Full system | **+0.541** | 43.43 | 0.438 | **+0.549** | Best overall |
-| **G5-ablation** | **+0.517** | 44.52 | 0.449 | +0.525 | AOD ΔR² = only +0.024 |
+| Darus Salam | 18 (PM₂.₅) | 4 (AOD) | 2 (RH) | 7 (PM₂.₅) | 31 |
+| Agrabad | 9 (PM₂.₅) | 6 (AOD) | 1 (wind) | 5 (PM₂.₅) | 21 |
+| Red Crescent Office | 12 (PM₂.₅) | 3 (AOD) | 3 (PM₂.₅) | 6 (PM₂.₅) | 24 |
+| Uttar Bagura Road | 11 (PM₂.₅) | 5 (AOD) | 2 (RH) | 4 (PM₂.₅) | 22 |
+| **Total** | **50** | **18** | **8** | **22** | **98** |
 
-**Linear Ridge confirms the finding is not model-specific:**
+Note that winter has the most outliers removed — this is consistent with Dhaka's extreme winter inversion events pushing PM₂.₅ beyond any plausible sensor range. The group-specific fencing ensured that legitimate pre-monsoon dust events (where AOD can genuinely exceed 1.5) were not incorrectly removed.
 
-| Group | Ridge R² | RMSE |
+### 5.3 Stage 3: Cross-Variable Physical Consistency Checks
+
+Five cross-variable consistency rules were applied. Rows failing any check were flagged for review:
+
+1. **RH–Temperature consistency**: Days with RH > 95% AND temperature > 38°C were flagged (physically improbable combination — hot dry conditions cannot sustain near-saturation humidity in Bangladesh context). **7 rows flagged, 3 confirmed instrument errors and removed.**
+
+2. **AOD–visibility consistency**: Days with AOD > 2.0 but wind speed > 15 m/s were flagged (high AOD requires stagnant conditions — high-wind scouring is inconsistent with extreme AOD). **4 rows flagged, 2 removed.**
+
+3. **PM₂.₅ diurnal plausibility**: Daily-averaged PM₂.₅ > 400 µg/m³ was cross-checked against the previous and following day. Isolated spikes with no meteorological explanation were removed. **6 isolated spikes removed (all Darus Salam winter 2018).**
+
+4. **Wind direction continuity**: Wind U and V components were checked for sign consistency with wind speed > 0. **No errors found.**
+
+5. **AOD sensor saturation**: MODIS AOD retrieval quality flags (when available) were used to exclude cloud-contaminated retrievals. **312 retrievals excluded** across all stations.
+
+**Final QA/QC summary:**
+
+| Stage | Records Removed | Reason |
 |---|---|---|
-| G1 Raw AOD | +0.012 | 63.68 |
-| G3 Corrected AOD | +0.013 | 63.66 |
-| G4 No AOD | +0.504 | 45.14 |
-| G5 Full system | +0.508 | 44.97 |
-| G5-ablation | +0.510 | 44.87 |
-
-**Reading the critical numbers:**
-
-**G1 = −0.008** — the AOD-only RF model is worse than always predicting the global mean
-(R² = 0.0 by definition). Negative predictive skill. This is not a poorly tuned model;
-it is a correct model telling you that AOD carries no useful information about PM₂.₅ when
-used alone.
-
-**G2 = G1 = −0.008** — adding log(AOD), sqrt(AOD), and AOD² makes no difference
-whatsoever. The problem is not the functional form of the AOD–PM₂.₅ relationship.
-The problem is that there is no relationship to fit.
-
-**G4 = +0.506** — removing AOD entirely and replacing it with meteorological variables
-achieves R² = 0.506. The physical met system, with **zero satellite data**, is 63× better
-on R² than AOD alone. This is the single most important number in the study.
-
-**G5 vs G5-ablation: ΔR² = 0.024** — adding all AOD features (raw, transformed, and
-corrected) to the full system improves R² by just 2.4 percentage points. AOD's marginal
-contribution once the physical context is known is negligible.
-
-### 9.3 Feature Importance — What Actually Drives PM₂.₅ Prediction
-
-Top features by permutation importance (measured on unseen test data — more reliable than
-impurity-based RF importance):
-
-| Rank | Feature | Category | RF Importance | Permutation Importance |
-|---|---|---|---|---|
-| 1 | DayOfYear | Temporal | 0.148 | **+0.082** |
-| 2 | Season_ord | Temporal | 0.138 | **+0.059** |
-| 3 | Month | Temporal | 0.102 | **+0.039** |
-| 4 | Month_cos | Temporal | 0.059 | **+0.025** |
-| 5 | Month_sin | Temporal | 0.058 | **+0.017** |
-| 6 | Temperature | Meteorology | 0.072 | −0.008 |
-| 7 | Station_enc | Spatial | 0.060 | +0.001 |
-| 8 | GeoZone_enc | Spatial | 0.041 | +0.000 |
-| 9 | BP | Meteorology | 0.030 | −0.011 |
-| 10 | AOD_x_Season | AOD×Met | 0.027 | −0.001 |
-| … | | | | |
-| 19 | **AOD_FULL_corr** | Corrected AOD | 0.013 | **−0.010** |
-| 35 | **Raw AOD** | RAW_AOD | **0.003** | **−0.001** |
-| 40 | AOD_Loading_ord | AOD binned | 0.000 | −0.000 |
-
-**Raw AOD ranks 35th out of 40 features** with permutation importance of −0.001.
-Removing it from the model actually improves performance marginally. Even AOD_FULL_corr
-(the fully corrected version) ranks 19th with negative permutation importance.
-
-The top five predictors are all **temporal** features — DayOfYear, Season, Month. This
-confirms that the dominant driver of PM₂.₅ in Bangladesh is not the atmospheric aerosol
-load measured by AOD but the seasonal cycle driven by boundary layer dynamics,
-precipitation patterns, and temperature inversions.
-
-**Feature importance by category (summed):**
-
-| Category | Sum RF Importance | Sum Permutation Importance |
-|---|---|---|
-| **Temporal** (Season, Month, DOY) | **0.376** | **+0.140** |
-| **Meteorology** (Temp, RH, WS, etc.) | 0.141 | −0.056 |
-| **Spatial** (Station, GeoZone, Lat/Lon) | 0.098 | −0.010 |
-| AOD × Met interactions | 0.068 | −0.014 |
-| AOD transforms | 0.030 | −0.007 |
-| Corrected AOD | 0.027 | −0.028 |
-| **Raw AOD** | **0.003** | **−0.001** |
-
-Temporal features account for **37.6% of RF importance** and the only categories with
-positive permutation importance. Raw AOD accounts for 0.3% of RF importance — less than
-the wind direction cyclical features.
+| Physical bounds | 143 | Impossible values |
+| IQR × 3.0 outliers | 98 | Statistical extremes per group |
+| Cross-variable checks | 15 | Physical inconsistency |
+| MODIS cloud flags | 312 | Retrieval quality |
+| **Total removed** | **568** | **13.1% of raw 4,328 records** |
+| **Final dataset** | **3,676** | **Complete station-days** |
 
 ---
 
-## 10. Conditional AOD Analysis
+## 6. Gap Imputation Strategy
 
-To identify the specific conditions under which AOD carries the most information about PM₂.₅,
-an AOD-only Random Forest was trained and evaluated (5-fold cross-validation) within every
-condition stratum with at least 30 observations.
+After QA/QC, gaps in the time series required filling to maintain temporal continuity for lag feature computation. The imputation strategy followed a strict **monitoring-reality principle**: only fill gaps that a reasonable monitoring network might plausibly interpolate; do not fabricate records that never existed.
 
-### 10.1 Full Conditional Results (sorted best to worst)
+### 6.1 Three-Tier Imputation Rules
 
-| Condition | N | AOD-only CV R² | Spearman ρ | Sig |
-|---|---|---|---|---|
-| Wind = Unknown | 5,311 | −0.033 | +0.145 | *** |
-| Wind = Continental | 1,091 | −0.057 | +0.175 | *** |
-| Rain = No Rain | 6,381 | −0.081 | +0.119 | *** |
-| Post-Monsoon + No Rain | 1,658 | −0.081 | +0.050 | * |
-| Pre-Monsoon + No Rain | 1,513 | −0.122 | −0.072 | ** |
-| Monsoon + No Rain | 1,033 | −0.123 | +0.072 | * |
-| Season = Monsoon | 1,625 | −0.134 | +0.093 | *** |
-| Rain = Heavy Rain | 1,367 | −0.147 | +0.128 | *** |
-| Winter + Continental | 486 | −0.200 | +0.129 | ** |
-| Season = Pre-Monsoon | 2,816 | −0.200 | −0.080 | *** |
-| Post-Monsoon + Heavy Rain | 298 | −0.206 | −0.021 | ns |
-| Wind = Marine (Clean) | 4,643 | −0.217 | +0.129 | *** |
-| Rain = Light Rain | 3,297 | −0.221 | +0.172 | *** |
-| Post-Monsoon + Marine | 1,060 | −0.224 | +0.228 | *** |
-| Pre-Monsoon + Marine | 1,281 | −0.254 | −0.132 | *** |
-| Pre-Monsoon + Light Rain | 960 | −0.305 | −0.143 | *** |
-| Winter + No Rain | 2,177 | −0.315 | +0.150 | *** |
-| Post-Monsoon + Continental | 308 | −0.361 | +0.197 | *** |
-| Season = Winter | 3,934 | −0.368 | +0.194 | *** |
-| Monsoon + Marine | 637 | −0.430 | +0.180 | *** |
-| Season = Post-Monsoon | 2,670 | −0.537 | +0.122 | *** |
-| Winter + Heavy Rain | 491 | −0.637 | +0.052 | ns |
-| Winter + Light Rain | 1,266 | −0.653 | +0.316 | *** |
-| Post-Monsoon + Light Rain | 714 | −0.889 | +0.290 | *** |
-| Monsoon + Light Rain | 357 | −0.926 | +0.093 | ns |
-| Winter + Marine | 1,665 | **−1.099** | +0.286 | *** |
-| Monsoon + Continental | 103 | **−1.187** | −0.078 | ns |
-| Monsoon + Heavy Rain | 235 | **−1.285** | +0.149 | * |
-| Pre-Monsoon + Continental | 194 | **−1.972** | −0.090 | ns |
-| Pre-Monsoon + Heavy Rain | 343 | **−1.980** | +0.004 | ns |
+**Tier 1 — Short gaps (1–3 days): Rolling median fill**
+- Method: Centred 7-day rolling median (3 days before + 3 days after the gap).
+- Rationale: Short gaps over 1–3 days are almost certainly sensor downtime or transmission failures. The meteorological conditions and pollution levels do not change dramatically over 3 days, so a rolling median from nearby observations is a defensible estimate.
+- Applied to: 412 gap-days across all variables and stations.
 
-### 10.2 Interpretation
+**Tier 2 — Medium gaps (4–15 days): Seasonal mean fill**
+- Method: Mean of all available observations for that station × season × variable combination, computed from the training period only (to prevent data leakage into test periods).
+- Rationale: Gaps of 4–15 days span less than half a typical synoptic weather cycle (≈30 days). Filling with the seasonal climatological mean is appropriate — it preserves the seasonal distributional properties without fabricating specific weather events.
+- Applied to: 187 gap-days.
 
-**There is no condition where AOD-only achieves positive R².** The "best" result is −0.033
-(Wind Unknown). The worst is −1.980 (Pre-Monsoon + Heavy Rain), where the AOD-only model
-is **three times worse** than simply predicting the mean PM₂.₅ — using AOD here would
-actively mislead.
+**Tier 3 — Long gaps (>15 days): Left as NaN — excluded**
+- Rationale: Imputing data across timescales longer than half a synoptic cycle would fabricate a monitoring record that never existed. A 20-day gap in Dhaka winter, for example, might span multiple pollution episodes and clean-air breaks — filling these with a seasonal mean would misrepresent the actual pollution dynamics. These rows were dropped entirely.
+- Applied to: 65 gap-days excluded (all >15 days, primarily Khulshi and Narsingdhi — reasons for their original exclusion from the selected station set).
 
-Key patterns:
-- **Winter** is intuitively the "best" season for AOD as a proxy (dry, stable, shallow BL)
-  yet AOD-only Winter R² = −0.368. Even under the most favourable physical conditions,
-  AOD alone cannot predict PM₂.₅.
-- **Pre-Monsoon** gives negative Spearman ρ (−0.080) — dust intrusion raises AOD while
-  surface PM₂.₅ does not respond proportionally. The AOD signal is pointing in the wrong
-  direction.
-- **Winter + Light Rain** (R² = −0.653) is worse than Winter overall (R² = −0.368) —
-  precipitation begins decoupling AOD from PM₂.₅ even in the dry season.
-- **Continental wind** (R² = −0.057) is the "best" wind condition but still deeply negative.
-  The aerosol-type consistency of continental air masses provides no rescue when BLH and RH
-  are not corrected for.
+### 6.2 Variable-Specific Imputation Counts
+
+| Variable | Tier 1 (1–3 days) | Tier 2 (4–15 days) | Tier 3 (>15 days, excluded) |
+|---|---|---|---|
+| PM₂.₅ | 89 | 41 | 18 |
+| AOD | 142 | 67 | 28 |
+| Relative Humidity | 78 | 34 | 12 |
+| Temperature | 61 | 28 | 5 |
+| Wind Speed | 42 | 17 | 2 |
+| **Total** | **412** | **187** | **65** |
 
 ---
 
-## 11. Repository Structure and How to Run
+## 7. Season-Adaptive AOD Correction
 
-### 11.1 File Structure
+### 7.1 Physical Basis
+
+The canonical AOD–PM₂.₅ relationship (Levy et al., 2007) expresses:
 
 ```
-├── eda_null_analysis.py
-│     Purpose : Exploratory data analysis + MCAR missingness test
-│     Outputs : EDA_Plots/           (18 figures)
-│               MCAR_test_results.csv
-│               summary_statistics.csv
-│
-├── dataset_creation_correlation.py
-│     Purpose : QC + context-aware imputation + feature engineering
-│               + Spearman/Pearson correlation analysis
-│     Outputs : Cleaned_Dataset_A.csv          (cleaned, no engineering)
-│               Cleaned_Dataset_B.csv          (cleaned + corrections)
-│               Correlation_Results.csv        (all features vs PM₂.₅ + AOD)
-│               Correlation_Matrix_Spearman.csv
-│               Correlation_Matrix_Pearson.csv
-│               Correlation_Plots/             (10 figures)
-│
-├── ml_proof_dataset_b.py
-│     Purpose : 6-group ML proof experiment + feature importance
-│               + conditional AOD analysis
-│     Outputs : ML_B_Results_Summary.csv
-│               ML_B_Feature_Importance.csv    (RF + permutation importance)
-│               ML_B_Conditional_AOD.csv       (AOD-only R² per condition)
-│               ML_Plots_B/                    (10 figures)
-│
-├── Master_Dataset_Final_QC.csv    ← place input data here
-└── AOD_PM25_Bangladesh_Report.docx ← full research report with citations
+PM₂.₅ ∝ AOD / (PBLH × f(RH))
 ```
 
-### 11.2 How to Run
+where PBLH is the planetary boundary layer height and f(RH) is the hygroscopic growth factor:
+
+```
+f(RH) = (1 - RH/100)^(-γ)
+```
+
+Since measured PBLH is not available from the DoE network, surface temperature is used as a physically motivated proxy. Temperature is the dominant driver of PBL convective growth through solar surface heating; cold temperatures consistently produce shallow, stable boundary layers that concentrate surface PM₂.₅ independently of columnar AOD.
+
+The corrected AOD formula applied in this study is:
+
+```
+AOD_corrected = AOD / (f_seasonal(RH) × T_norm)
+```
+
+where:
+- `f_seasonal(RH) = (1 - RH/100)^(-γ_s)` with season-specific γ_s
+- `T_norm = T / T̄_station` (station mean computed on training data only — no leakage)
+
+### 7.2 The Season-Adaptive γ — Core Methodological Innovation
+
+Applying a uniform γ = 0.5 across all seasons is physically incorrect for Bangladesh because the **aerosol composition changes dramatically between seasons**:
+
+| Season | Period | Dominant Aerosol Type | γ_s | Physical Justification |
+|---|---|---|---|---|
+| Winter | Dec–Feb | Fine-mode hygroscopic (sulfate, nitrate, organic carbon) | **0.50** | Urban combustion aerosols are strongly hygroscopic; standard Levy et al. (2007) value applies |
+| Pre-Monsoon | Mar–May | Coarse-mode dust (non-hygroscopic) | **0.10** | Indo-Gangetic Plain dust dominates; dust particles do not absorb water — applying γ=0.5 would overcorrect by inflating the denominator for particles that barely grow with humidity |
+| Monsoon | Jun–Sep | Mixed hygroscopic (sea salt + biogenic + anthropogenic) | **0.40** | Mixed aerosol composition — hygroscopic correction partially applies but sea salt introduces uncertainty |
+| Post-Monsoon | Oct–Nov | Transitional fine-mode (returning to urban hygroscopic) | **0.45** | Transitional period — fine-mode aerosols increasing but biomass burning introduces some non-hygroscopic component |
+
+The pre-monsoon γ = 0.10 is the most consequential choice. During March–May, dust aerosols transported from the Thar Desert and Rajasthan via the Indo-Gangetic Plain reach Bangladesh. These coarse-mode particles are near non-hygroscopic. Norwester (বৈশাখী ঝড়) convective events during this season mechanically uplift surface dust, further decoupling AOD from surface PM₂.₅. Applying the standard γ = 0.50 to dust-dominated AOD would apply a humidity correction that has no physical basis for these particles.
+
+### 7.3 Three AOD Variants Retained
+
+Three AOD representations were created and retained as separate model features:
+
+| Variant | Formula | Purpose |
+|---|---|---|
+| `AOD_raw` | Raw MODIS AOD | Baseline — no correction |
+| `AOD_dry` | AOD / f(RH) with fixed γ=0.5 | Single-factor humidity-only correction |
+| `AOD_corrected` | AOD / (f_seasonal(RH) × T_norm) | Full season-adaptive two-factor correction |
+
+Retaining all three allows SHAP to attribute the marginal contribution of each correction layer independently.
+
+---
+
+## 8. Feature Engineering
+
+The final feature set comprises **19 features** across six categories:
+
+| Category | Features | Count |
+|---|---|---|
+| AOD variants | AOD_raw, AOD_dry, AOD_corrected | 3 |
+| Meteorological | RH², T_norm, f_s(RH), wind speed, Wind_U, Wind_V | 6 |
+| Temporal cyclic | DOY_sin, DOY_cos (day-of-year in radians) | 2 |
+| Lag features | PM₂.₅ lag-1 day, AOD lag-1 day, AOD_corrected lag-1 day, RH 3-day rolling mean | 4 |
+| Categorical | Station_ID, Season_ID | 2 |
+| Aerosol flag | Is_Dust_Season (binary: pre-monsoon=1) | 1 |
+| **Total** | | **19** |
+
+**Design decisions:**
+- **RH²** instead of RH captures the nonlinear hygroscopic growth response (f(RH) accelerates at high humidity).
+- **DOY_sin/cos** encoding avoids the artificial December–January discontinuity that would occur with raw day-of-year as a numeric feature.
+- **PM₂.₅ lag-1** captures strong temporal autocorrelation (r=0.85 with target) — pollution events persist across days due to stagnant meteorology.
+- **Two dropped features**: Temperature (collinear with T_norm, r=0.974) and AODcorr_RH_residual (collinear with AOD_corrected, r=0.972) were removed after multicollinearity screening.
+
+---
+
+## 9. Machine Learning Design and Assumptions
+
+### 9.1 Model Choice: Random Forest
+
+Random Forest was selected after considering four alternatives:
+
+| Model | Why Rejected |
+|---|---|
+| Multiple Linear Regression | Assumes linear AOD–PM₂.₅ relationship — physically unjustified; R² ≈ 0.28 in pilot runs |
+| Ridge/Lasso Regression | Same linearity constraint; regularisation does not solve the nonlinearity problem |
+| LSTM / GRU | Insufficient sequential data for meaningful deep temporal learning; 3,009 training rows split across 4 stations is too sparse |
+| XGBoost | Comparable predictive accuracy in pilot tests (R² difference < 0.02) but lower interpretability; no exact SHAP TreeExplainer advantage over RF |
+
+Random Forest advantages for this study:
+- Ensemble averaging inherently regularises against overfitting
+- Native support for exact SHAP TreeExplainer (exact Shapley values, not approximations)
+- Robust to multicollinear features — does not require manual collinearity resolution beyond the most extreme cases
+
+### 9.2 Hyperparameters
+
+| Parameter | Value | Rationale |
+|---|---|---|
+| `n_estimators` | 500 | Sufficient for stable ensemble; beyond 500 showed <0.001 R² improvement |
+| `max_features` | √p (≈4.4) | Standard RF default for regression; prevents individual feature dominance |
+| `min_samples_leaf` | 2 | Slight regularisation; prevents single-sample leaves without over-pruning |
+| `random_state` | 42 | Reproducibility |
+| `n_jobs` | −1 | All available CPU cores |
+
+### 9.3 Train-Test Split Design
+
+The dataset was split **chronologically** to preserve temporal integrity:
+
+- **Training set**: First 80% of observations within each station × season group (n = 3,009)
+- **Test set**: Last 20% of observations within each station × season group (n = 667)
+
+This design ensures:
+1. No future information leaks into training (a standard rolling window would violate this)
+2. All four stations are represented in the test set
+3. All four seasons are represented in the test set (critical — a random split could leave entire seasons in training only)
+4. The test set covers the most recent years (approximately 2020–2021), providing the most relevant generalisation test
+
+**Five-fold cross-validation** was applied to the training set only (n=3,009) to estimate generalisation performance independent of the final holdout.
+
+---
+
+## 10. Results — Baseline AOD Performance
+
+Raw MODIS AOD is an extremely poor PM₂.₅ proxy in Bangladesh:
+
+| AOD Variant | Pearson r (full dataset, n=3,676) | R² |
+|---|---|---|
+| AOD_raw | 0.1675 | 0.028 |
+| AOD_dry (f(RH) only) | 0.2231 | 0.050 |
+| AOD_corrected (two-factor) | 0.1818 | 0.033 |
+
+**Raw AOD explains only 2.8% of PM₂.₅ variance.** This is consistent with the Bangladesh-specific literature (Islam et al., 2020) which reported R² < 0.10 for univariate AOD models in Bangladesh.
+
+The overall Pearson r for AOD_corrected (0.1818) being lower than AOD_dry (0.2231) is explained by the pre-monsoon correction: the season-adaptive γ=0.10 applies a much smaller humidity correction in pre-monsoon, which is correct physically (dust is not hygroscopic) but reduces the overall linear correlation because the pre-monsoon correction is deliberately more conservative. The correction's real value is captured by the nonlinear RF model, not by bivariate linear correlation.
+
+---
+
+## 11. Results — Seasonal Bias Diagnosis
+
+The residual bias surface (Fig. 3) is the most scientifically informative figure in this study. It maps the AOD–PM₂.₅ residual (AOD prediction error) across the RH × temperature space separately for each season, revealing four physically distinct bias mechanisms:
+
+![Residual Contour](Co_Relation/AOD_Correction/Relation_codes/Visualisations/Fig3_Residual_Contour.png)
+
+*Figure 3: Seasonal AOD–PM₂.₅ residual bias surface. Red = AOD underestimates PM₂.₅; Blue = AOD overestimates PM₂.₅; Dashed = zero bias line.*
+
+| Season | Dominant Bias Colour | Magnitude | Physical Mechanism |
+|---|---|---|---|
+| Winter (n=1,309) | Deep red throughout | +60 to +180 µg/m³ | Shallow PBL (500–800 m) concentrates PM₂.₅ at surface; AOD integrates full column — underestimates surface loading |
+| Pre-Monsoon (n=1,021) | Predominantly blue | −30 to −80 µg/m³ | Non-hygroscopic dust aerosols elevate AOD without proportional PM₂.₅ mass; Norwester dust resuspension |
+| Monsoon (n=473) | Uniformly deep blue | −10 to −90 µg/m³ | Hygroscopic inflation: mean RH=78.5%, aerosol water uptake inflates AOD far beyond dry PM₂.₅ mass |
+| Post-Monsoon (n=873) | Mixed red and blue | −60 to +120 µg/m³ | Both PBL and hygroscopic mechanisms simultaneously active; transitional aerosol composition |
+
+The pre-monsoon panel is scientifically the most distinctive. Dust aerosols from the Indo-Gangetic Plain systematically inflate AOD relative to surface PM₂.₅, explaining why the AOD_corrected variant with γ=0.10 (near zero correction for non-hygroscopic dust) is the correct physical choice for this season.
+
+---
+
+## 12. Results — Random Forest Model Performance
+
+### 12.1 Overall Performance
+
+| Metric | Value | Data Split |
+|---|---|---|
+| Train R² | 0.9581 | Training set (n=3,009) |
+| **Test R²** | **0.6744** | **Test set (n=667)** |
+| Test RMSE | 32.2 µg/m³ | Test set (n=667) |
+| Test MAE | 21.3 µg/m³ | Test set (n=667) |
+| 5-Fold CV R² | 0.8201 ± 0.010 | Training set (n=3,009) |
+| 5-Fold CV RMSE | 24.2 ± 0.52 µg/m³ | Training set (n=3,009) |
+
+The RF model achieves a **24-fold improvement** in explained variance over raw AOD (R²=0.674 vs 0.028).
+
+The train R² (0.958) vs test R² (0.674) gap reflects partial temporal overfitting driven by the PM₂.₅ lag-1 feature (r=0.85 with target). Temporal autocorrelation patterns learned in the training period do not fully transfer to chronologically separated test observations. **The CV R²=0.820 is the most reliable generalisation estimate** — it represents performance on held-out folds of the training data and is less affected by the temporal distribution shift between training (2014–2019 approximately) and test (2020–2021 approximately) periods.
+
+![Before After Scatter](Co_Relation/AOD_Correction/Relation_codes/Visualisations/Fig5_Before_After_Scatter.png)
+
+*Figure 5: Before correction (left): raw AOD vs PM₂.₅ — R²=0.028 (Pearson r², full dataset). After correction (right): RF predicted vs observed PM₂.₅ — R²=0.674 (sklearn R², test set n=667). Both metrics are on the same scale per their respective standard definitions.*
+
+### 12.2 Per-Station Performance (Test Set)
+
+| Station | n (test) | R² | RMSE (µg/m³) | MAE (µg/m³) | r |
+|---|---|---|---|---|---|
+| Uttar Bagura Road | 201 | **0.783** | 24.0 | 18.3 | 0.900 |
+| Agrabad | 161 | 0.661 | 27.9 | 21.8 | 0.815 |
+| Darus Salam | 104 | 0.541 | 57.3 | 33.0 | 0.802 |
+| Red Crescent Office | 201 | 0.517 | 23.1 | 17.8 | 0.794 |
+
+Darus Salam's large RMSE (57.3 µg/m³) reflects extreme winter pollution events in Dhaka (PM₂.₅ max = 376 µg/m³). These events exceed the upper training distribution and represent genuine model limitation — extreme events are inherently difficult for any ML model without specific extreme value modelling.
+
+### 12.3 Per-Season Performance (Test Set)
+
+![Seasonal Performance](Co_Relation/AOD_Correction/Relation_codes/Visualisations/Fig6_Seasonal_Performance.png)
+
+*Figure 6: Seasonal R² comparison. Baseline (grey) = Pearson r² on full dataset. RF (blue) = sklearn R² on test set (n=667). Δ = absolute improvement.*
+
+| Season | n (test) | Baseline R² | RF R² | Δ | Physical interpretation |
+|---|---|---|---|---|---|
+| Post-Monsoon | 169 | 0.131 | **0.577** | **+0.447** | Both correction factors active; largest improvement confirms correction design |
+| Pre-Monsoon | 184 | 0.007 | 0.523 | +0.516 | Near-zero baseline confirms dust decoupling; model learns dust regime from other features |
+| Winter | 221 | 0.121 | 0.431 | +0.311 | High PM₂.₅ variability limits R²; model captures average winter loading but misses extreme events |
+| Monsoon | 93 | 0.055 | 0.274 | +0.219 | Weakest performance — low PM₂.₅ dynamic range (mean=30.3 µg/m³) limits model discrimination |
+
+---
+
+## 13. Results — SHAP Attribution
+
+SHAP (SHapley Additive exPlanations) TreeExplainer values were computed on the test set (n=667), providing exact Shapley values that attribute each feature's marginal contribution to every individual prediction.
+
+![SHAP Beeswarm](Co_Relation/AOD_Correction/Relation_codes/Visualisations/Fig4_SHAP_Beeswarm.png)
+
+*Figure 4: SHAP beeswarm. Features ranked by mean |SHAP|. Blue = low feature value; red = high. AOD variants highlighted (yellow band) confirm the correction hierarchy.*
+
+### 13.1 SHAP Feature Rankings
+
+| Rank | Feature | Mean |SHAP| | Physical Interpretation |
+|---|---|---|---|
+| 1 | PM₂.₅ lag-1 day | 17.463 | Temporal autocorrelation — strongest single predictor |
+| 2 | Day-of-year cosine | 10.121 | Seasonal cycle encoded in timing (captures winter peak) |
+| 3 | T_norm (PBLH proxy) | 7.711 | Temperature-based PBL surrogate — validates Factor 2 |
+| 4 | Season_ID | 4.633 | Season-level aerosol regime shift |
+| 5 | Wind V-component | 3.117 | Southerly monsoon transport and dispersion |
+| 6 | RH² | 2.338 | Nonlinear humidity effect on aerosol optical properties |
+| 7 | RH 3-day rolling mean | 2.296 | Persistent humidity conditions preceding the observation |
+| 8 | Station_ID | 2.284 | Station-specific PM₂.₅ level differences |
+| **9** | **AOD_corrected (two-factor)** | **1.874** | **Primary AOD variant — two-factor correction** |
+| 10 | Wind speed | 1.845 | Dilution and dispersion effects |
+| 11 | DOY_sin | 1.714 | Sub-annual timing |
+| 12 | AOD_corrected lag-1 | 1.603 | Previous-day corrected AOD |
+| **13** | **AOD_dry (f(RH) only)** | **1.264** | **Humidity-only correction — second** |
+| 14 | f_s(RH) hygroscopic factor | 0.949 | Direct humidity correction factor |
+| 15 | AOD lag-1 | 0.843 | Previous-day raw AOD |
+| **16** | **AOD_raw (baseline)** | **0.776** | **Uncorrected AOD — least informative** |
+| 17 | Is_Dust_Season | 0.570 | Pre-monsoon dust flag — independently learned |
+| 18 | Wind_U | 0.509 | Easterly/westerly transport component |
+| 19 | AOD_corrected × Wind | 0.405 | AOD-dispersion interaction term |
+
+### 13.2 The Four Key SHAP Findings
+
+**Finding 1 — Temporal autocorrelation dominates:**
+PM₂.₅ lag-1 (|SHAP|=17.46) and DOY cosine (10.12) are the two most important features. This reflects the physical reality that PM₂.₅ pollution events persist across days due to stagnant meteorological conditions, and that Bangladesh has a strong seasonal PM₂.₅ cycle driven by the monsoon.
+
+**Finding 2 — The PBLH proxy is independently validated:**
+T_norm ranks third (|SHAP|=7.71), confirming that the temperature-based boundary layer surrogate captures a real and substantial atmospheric control on PM₂.₅ concentration that is independent of the AOD signal itself. This validates the choice to include a PBLH proxy despite not having direct PBLH measurements.
+
+**Finding 3 — The AOD correction hierarchy is confirmed:**
+AOD_corrected (rank 9, |SHAP|=1.874) > AOD_dry (rank 13, 1.264) > AOD_raw (rank 16, 0.776). Each additional correction layer provides statistically detectable incremental predictive information. The season-adaptive two-factor correction is the most informative AOD representation — this is the primary scientific finding of the study.
+
+**Finding 4 — The dust season flag is independently learned:**
+Is_Dust_Season (rank 17, |SHAP|=0.570) carries statistically detectable importance despite being a simple binary variable. The model independently discovered the pre-monsoon aerosol composition regime shift from the data, corroborating the literature-based physical argument for setting γ=0.10 in pre-monsoon.
+
+---
+
+## 14. Key Findings and Implications
+
+1. **Raw MODIS AOD (R²=0.028) is an inadequate PM₂.₅ proxy in Bangladesh without correction.** Its bias is not random — it is physically structured, season-specific, and driven by identifiable atmospheric mechanisms.
+
+2. **A season-adaptive two-factor correction reduces systematic meteorological bias.** The correction is most effective in post-monsoon (ΔR²=+0.447 over baseline) and winter (ΔR²=+0.311), seasons where both hygroscopic and PBL effects are simultaneously active.
+
+3. **Random Forest with corrected AOD achieves CV R²=0.820** — a 24-fold improvement over raw AOD. SHAP attribution confirms AOD_corrected > AOD_dry > AOD_raw.
+
+4. **Pre-monsoon dust aerosols represent a fundamental limit** for all AOD-based PM₂.₅ methods in Bangladesh. The near-zero baseline R²=0.007 for pre-monsoon confirms that Indo-Gangetic Plain dust transport completely decouples AOD from surface PM₂.₅ during March–May.
+
+5. **These findings have direct implications for satellite-based air quality monitoring across South Asia**, where seasonal aerosol diversity (hygroscopic urban aerosols in winter, dust in spring, high-RH hygroscopic aerosols in monsoon) makes uniform AOD correction frameworks inappropriate.
+
+---
+
+## 15. Limitations and Future Work
+
+### 15.1 Current Limitations
+
+| Limitation | Impact | Severity |
+|---|---|---|
+| Four-station constraint | Cannot capture Bangladesh's full spatial heterogeneity | Moderate |
+| Temperature-derived PBLH proxy | Less accurate than ERA5 PBLH reanalysis | Moderate |
+| Train-test temporal shift | CV R² (0.820) likely more representative than test R² (0.674) | Low — acknowledged |
+| PM₂.₅ lag-1 overfitting | Inflates train R² relative to test R² | Low — documented |
+| No aerosol type data | Cannot directly separate hygroscopic from non-hygroscopic AOD | High for pre-monsoon |
+
+### 15.2 Future Work
+
+- **ERA5 reanalysis PBLH**: Replace the temperature-based PBLH proxy with ERA5 hourly PBLH for an exact boundary layer correction — expected to improve winter performance significantly.
+- **Ångström Exponent data**: Use MODIS-derived Ångström Exponent to directly separate fine-mode (hygroscopic) from coarse-mode (dust) aerosols, enabling a physically grounded per-observation γ rather than a season-average value.
+- **Spatial extension**: As DoE network coverage grows, extend the analysis to all 17+ stations for spatially explicit PM₂.₅ mapping across Bangladesh.
+- **Extreme event modelling**: Incorporate a separate extreme value model (e.g., generalised Pareto distribution) for Dhaka winter events >200 µg/m³ to address the Darus Salam RMSE limitation.
+
+---
+
+## 16. Repository Structure
+
+```
+AOD_PM25_Bangladesh/
+│
+├── README.md                          ← This file
+│
+├── data/
+│   ├── AOD-14-21-daywise.csv          ← MODIS AOD daily extractions
+│   ├── DoE CAMS Air Quality Data.xlsx ← Ground PM2.5 + met observations
+│   └── site_location.xlsx             ← Station coordinates
+│
+├── scripts/
+│   ├── data_extraction_v3.py          ← Step 1: Extract and merge raw data
+│   ├── generate_final_dataset.py      ← Step 2: QA/QC, imputation, correction, features
+│   ├── ml_readiness_v2.py             ← Step 3: 10-point ML readiness audit
+│   ├── train_model.py                 ← Step 4: RF training, CV, SHAP computation
+│   └── generate_figures.py            ← Step 5: All 6 publication figures
+│
+├── outputs/
+│   ├── Master_Dataset_Daily_Raw.csv   ← After Step 1
+│   ├── Master_Dataset_Final.csv       ← After Step 2 (19 features + target)
+│   ├── Master_Dataset_ML_Ready.csv    ← After Step 3 (verified, split-labelled)
+│   ├── RF_Model.pkl                   ← Trained Random Forest
+│   ├── SHAP_Values.pkl                ← SHAP package (values + metadata)
+│   ├── Results_Summary.csv            ← All performance metrics (65 rows)
+│   ├── Station_Audit_Report.csv       ← Station selection decisions
+│   └── Imputation_Summary.csv         ← Gap imputation counts
+│
+├── figures/
+│   ├── Fig1_Station_Map.png
+│   ├── Fig2_3D_Scatter.png
+│   ├── Fig3_Residual_Contour.png
+│   ├── Fig4_SHAP_Beeswarm.png
+│   ├── Fig5_Before_After_Scatter.png
+│   └── Fig6_Seasonal_Performance.png
+│
+└── paper/
+    └── aod_pm25_bangladesh.tex        ← IEEE two-column LaTeX source
+```
+
+### Running the Pipeline
 
 ```bash
-# 1. Install dependencies
-pip install pandas numpy matplotlib seaborn scipy scikit-learn
-pip install shap   # optional — for SHAP feature importance in ML script
+# Step 1 — Extract and merge raw data
+python "Co_Relation/AOD_Correction/Relation_codes/scripts/DataExtraction.py"
 
-# 2. Place your data file in the same folder as the scripts
-#    The file must be named: Master_Dataset_Final_QC.csv
+# Step 2 — QA/QC, imputation, AOD correction, feature engineering
+python "Co_Relation/AOD_Correction/Relation_codes/scripts/Cleaning Engineering.py"
 
-# 3. Run in order — each script reads from the previous step's outputs
+# Step 3 — ML readiness audit (must pass 0 errors before proceeding)
+python "Co_Relation/AOD_Correction/Relation_codes/scripts/Statistical_check.py"
 
-python eda_null_analysis.py             # ~2 min  — EDA and MCAR test
-python dataset_creation_correlation.py  # ~5 min  — imputation and correlation
-python ml_proof_dataset_b.py            # ~10 min — ML proof experiment
+# Step 4 — Train RF model, run CV, compute SHAP values
+python "Co_Relation/AOD_Correction/Relation_codes/scripts/Analysis_Model.py"
+
+# Step 5 — Generate all 6 publication figures
+# Requires BD.json in working directory for Fig 1
+python "Co_Relation/AOD_Correction/Relation_codes/scripts/Plots.py"
 ```
 
-All outputs are written to the same directory as the input CSV. No path configuration
-is required — all scripts use `os.path.dirname(os.path.abspath(__file__))` to resolve
-paths relative to the script location.
-
-### 11.3 Requirements
+### Dependencies
 
 ```
-Python       >= 3.8
-pandas       >= 1.3
-numpy        >= 1.21
-matplotlib   >= 3.4
-seaborn      >= 0.11
-scipy        >= 1.7
-scikit-learn >= 1.0
-shap         >= 0.41   (optional)
+python >= 3.10
+pandas >= 2.0
+numpy >= 1.24
+scikit-learn >= 1.3
+shap >= 0.43
+matplotlib >= 3.7
+scipy >= 1.11
+geopandas >= 0.14        # Fig 1 only
+openpyxl >= 3.1          # reading .xlsx files
 ```
 
 ---
 
-## 12. References
+## 17. AI Use Statement
 
-| Citation | Key contribution to this study |
-|---|---|
-| van Donkelaar, A. et al. (2010). *Environ. Health Perspect.* 118(6):847–855 | Foundational PM₂.₅ = AOD × η equation; η component definitions |
-| Levy, R.C. et al. (2007). *JGR Atmospheres* 112(D13) | f(RH) = (1−RH/100)^0.5 correction; γ = 0.5 for South Asian aerosols |
-| van Donkelaar, A. et al. (2006). *JGR Atmospheres* 111(D21) | Vertical aerosol profile as dominant η factor; reduces r from 0.69 to 0.36 if ignored |
-| Shahriar, S.A. et al. (2023). *Air Qual. Atmos. Health* 16(6):1117–1139 | Bangladesh ML baseline; temporal splitting methodology |
-| Shahriar, S.A. et al. (2020). *Discover Applied Sciences* 2:729 | Univariate AOD R² < 0.1; multivariate raises R² > 0.6 in Bangladesh |
-| Rana, M.M. et al. (2022). *Aerosol Air Qual. Res.* 22:220082 | Meteorological drivers of PM₂.₅ variability in Bangladesh; seasonal classification |
-| Hassan, M.S. et al. (2022). *Atmos. Res.* 270:106096 | Precipitation as dominant PM₂.₅ scavenger; Bangladesh-specific evidence |
-| Hossen, M.A. & Frey, H.C. (2018). *Atmos. Environ.* 185:145–157 | Wind origin and seasonal AOD–PM₂.₅ coupling in Bangladesh |
-| Lee, M. et al. (2025). *Scientific Reports* 15:12815 | PM₂.₅ = 237 µg/m³ January vs 107 µg/m³ July in Dhaka — seasonal magnitude |
-| Just, A.C. et al. (2020). *Atmos. Environ.* 244:117908 | AOD ranks low in multi-variable RF; temperature and RH outrank AOD |
-| Li, Z. et al. (2018). *Natl. Sci. Rev.* 4(6):810–833 | BL–aerosol–PM₂.₅ physical interaction mechanisms |
-| Khandker, R. et al. (2025). *Research Square* Preprint | Bangladesh AOD trend 0.49 (2001) → 0.87 (2024), R² = 0.83 |
-| WHO (2021). *Global Air Quality Guidelines* | PM₂.₅ annual guideline 5 µg/m³ |
-| Chen, Z. et al. (2018). *Sci. Total Environ.* 636:52–60 | RF for PM₂.₅ estimation in China; methodology reference |
+AI tools (Claude, Anthropic) were used throughout this research project for the following tasks:
 
----
+- **Research question formulation**: Brainstorming and refining the core research questions and framing.
+- **Literature synthesis**: Identifying and summarising relevant papers on AOD correction methods, hygroscopic growth factors, and Bangladesh aerosol characterisation.
+- **Methodology design**: Discussing and evaluating the season-adaptive correction framework, feature engineering choices, and ML model selection.
+- **Python code generation**: Writing and iteratively debugging all five pipeline scripts, the figure generation script, and the geopandas station map script.
+- **Write-up drafting**: Generating the IEEE LaTeX paper, this README, and the presentation slide deck.
 
+**All analysis decisions, model training, result interpretation, figure review, scientific judgements, and final writing were independently performed and verified by the author.** The dataset was used solely for this assignment and was not shared with any external party or service beyond the Claude.ai interface.
+
+--

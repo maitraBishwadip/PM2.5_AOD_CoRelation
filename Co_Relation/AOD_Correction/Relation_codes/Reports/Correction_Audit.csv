@@ -1,0 +1,5 @@
+Station,AOD_raw_mean,AOD_corr_mean,r_AOD_PM25,r_AODcorr_PM25,delta_r
+Agrabad,0.6231,0.3502,-0.0463,0.22,0.2663
+Darus Salam,0.7325,0.4462,0.1924,0.3824,0.1901
+Red Crescent Office,0.536,0.2697,0.0788,0.2754,0.1966
+Uttar Bagura Road,0.6951,0.3465,0.1595,0.4233,0.2638

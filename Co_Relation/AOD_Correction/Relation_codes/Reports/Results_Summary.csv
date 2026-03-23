@@ -1,0 +1,86 @@
+Section,Label,Season,Station,N,R2,RMSE,MAE,r_Pearson
+TABLE_1_BASELINE,Pearson_r2_AOD_raw_full,All,All,3676,0.0281,N/A,N/A,N/A
+TABLE_1_BASELINE,Pearson_r2_AOD_dry_full,All,All,3676,0.0498,N/A,N/A,N/A
+TABLE_1_BASELINE,Pearson_r2_AOD_corr_full,All,All,3676,0.033,N/A,N/A,N/A
+TABLE_1_BASELINE,sklearn_R2_OLS_AOD_test,All,All,667,-0.0454,N/A,N/A,N/A
+TABLE_1_BASELINE,sklearn_R2_OLS_corr_test,All,All,667,-0.0764,N/A,N/A,N/A
+TABLE_1_BASELINE,Baseline_by_station_season,Winter,Agrabad,336,0.0171,N/A,N/A,0.1307
+TABLE_1_BASELINE,Corrected_by_station_season,Winter,Agrabad,336,0.0198,N/A,N/A,0.1407
+TABLE_1_BASELINE,Baseline_by_station_season,Pre-Monsoon,Agrabad,230,0.0376,N/A,N/A,-0.1938
+TABLE_1_BASELINE,Corrected_by_station_season,Pre-Monsoon,Agrabad,230,0.0114,N/A,N/A,-0.1065
+TABLE_1_BASELINE,Baseline_by_station_season,Monsoon,Agrabad,70,0.1035,N/A,N/A,0.3217
+TABLE_1_BASELINE,Corrected_by_station_season,Monsoon,Agrabad,70,0.1186,N/A,N/A,0.3444
+TABLE_1_BASELINE,Baseline_by_station_season,Post-Monsoon,Agrabad,173,0.0958,N/A,N/A,0.3095
+TABLE_1_BASELINE,Corrected_by_station_season,Post-Monsoon,Agrabad,173,0.2137,N/A,N/A,0.4623
+TABLE_1_BASELINE,Baseline_by_station_season,Winter,Darus Salam,284,0.0218,N/A,N/A,0.1475
+TABLE_1_BASELINE,Corrected_by_station_season,Winter,Darus Salam,284,0.0089,N/A,N/A,0.0945
+TABLE_1_BASELINE,Baseline_by_station_season,Pre-Monsoon,Darus Salam,236,0.0032,N/A,N/A,-0.0565
+TABLE_1_BASELINE,Corrected_by_station_season,Pre-Monsoon,Darus Salam,236,0.0038,N/A,N/A,0.0619
+TABLE_1_BASELINE,Baseline_by_station_season,Monsoon,Darus Salam,131,0.0167,N/A,N/A,0.1292
+TABLE_1_BASELINE,Corrected_by_station_season,Monsoon,Darus Salam,131,0.0138,N/A,N/A,0.1175
+TABLE_1_BASELINE,Baseline_by_station_season,Post-Monsoon,Darus Salam,213,0.0641,N/A,N/A,0.2531
+TABLE_1_BASELINE,Corrected_by_station_season,Post-Monsoon,Darus Salam,213,0.1704,N/A,N/A,0.4128
+TABLE_1_BASELINE,Baseline_by_station_season,Winter,Red Crescent Office,360,0.1526,N/A,N/A,0.3906
+TABLE_1_BASELINE,Corrected_by_station_season,Winter,Red Crescent Office,360,0.1395,N/A,N/A,0.3735
+TABLE_1_BASELINE,Baseline_by_station_season,Pre-Monsoon,Red Crescent Office,278,0.0064,N/A,N/A,-0.0803
+TABLE_1_BASELINE,Corrected_by_station_season,Pre-Monsoon,Red Crescent Office,278,0.0016,N/A,N/A,-0.0397
+TABLE_1_BASELINE,Baseline_by_station_season,Monsoon,Red Crescent Office,133,0.1011,N/A,N/A,0.3179
+TABLE_1_BASELINE,Corrected_by_station_season,Monsoon,Red Crescent Office,133,0.141,N/A,N/A,0.3755
+TABLE_1_BASELINE,Baseline_by_station_season,Post-Monsoon,Red Crescent Office,241,0.0718,N/A,N/A,0.2679
+TABLE_1_BASELINE,Corrected_by_station_season,Post-Monsoon,Red Crescent Office,241,0.1484,N/A,N/A,0.3852
+TABLE_1_BASELINE,Baseline_by_station_season,Winter,Uttar Bagura Road,329,0.0501,N/A,N/A,0.2238
+TABLE_1_BASELINE,Corrected_by_station_season,Winter,Uttar Bagura Road,329,0.0755,N/A,N/A,0.2747
+TABLE_1_BASELINE,Baseline_by_station_season,Pre-Monsoon,Uttar Bagura Road,277,0.0191,N/A,N/A,-0.138
+TABLE_1_BASELINE,Corrected_by_station_season,Pre-Monsoon,Uttar Bagura Road,277,0.0033,N/A,N/A,-0.0573
+TABLE_1_BASELINE,Baseline_by_station_season,Monsoon,Uttar Bagura Road,139,0.1293,N/A,N/A,0.3596
+TABLE_1_BASELINE,Corrected_by_station_season,Monsoon,Uttar Bagura Road,139,0.1879,N/A,N/A,0.4335
+TABLE_1_BASELINE,Baseline_by_station_season,Post-Monsoon,Uttar Bagura Road,246,0.077,N/A,N/A,0.2775
+TABLE_1_BASELINE,Corrected_by_station_season,Post-Monsoon,Uttar Bagura Road,246,0.2227,N/A,N/A,0.4719
+TABLE_2_RF_MODEL,RF_Train,All,All,3009,0.9581,11.693,7.962,0.9809
+TABLE_2_RF_MODEL,RF_Test,All,All,667,0.6744,32.162,21.286,0.8259
+TABLE_2_RF_MODEL,RF_5fold_CV,All,All,3009,0.8201,24.195,N/A,N/A
+TABLE_2_RF_MODEL,RF_by_Station,All,Agrabad,161,0.6611,27.862,21.781,0.815
+TABLE_2_RF_MODEL,RF_by_Station,All,Darus Salam,104,0.5414,57.331,32.999,0.8017
+TABLE_2_RF_MODEL,RF_by_Station,All,Red Crescent Office,201,0.5171,23.107,17.791,0.794
+TABLE_2_RF_MODEL,RF_by_Station,All,Uttar Bagura Road,201,0.7827,24.003,18.323,0.9002
+TABLE_2_RF_MODEL,RF_by_Season,Winter,All,221,0.4314,44.325,30.404,0.6816
+TABLE_2_RF_MODEL,RF_by_Season,Pre-Monsoon,All,184,0.5228,20.271,15.257,0.7522
+TABLE_2_RF_MODEL,RF_by_Season,Monsoon,All,93,0.2743,16.095,11.84,0.5945
+TABLE_2_RF_MODEL,RF_by_Season,Post-Monsoon,All,169,0.5774,30.386,21.124,0.7606
+SHAP_IMPORTANCE,Rank_01_PM2.5_lag1,N/A,PM2.5_lag1,667,N/A,N/A,N/A,17.46329
+SHAP_IMPORTANCE,Rank_02_DOY_cos,N/A,DOY_cos,667,N/A,N/A,N/A,10.12058
+SHAP_IMPORTANCE,Rank_03_Temp_norm,N/A,Temp_norm,667,N/A,N/A,N/A,7.71146
+SHAP_IMPORTANCE,Rank_04_Season_ID,N/A,Season_ID,667,N/A,N/A,N/A,4.63345
+SHAP_IMPORTANCE,Rank_05_Wind_V,N/A,Wind_V,667,N/A,N/A,N/A,3.11693
+SHAP_IMPORTANCE,Rank_06_RH_squared,N/A,RH_squared,667,N/A,N/A,N/A,2.33772
+SHAP_IMPORTANCE,Rank_07_RH_rolling3,N/A,RH_rolling3,667,N/A,N/A,N/A,2.29649
+SHAP_IMPORTANCE,Rank_08_Station_ID,N/A,Station_ID,667,N/A,N/A,N/A,2.284
+SHAP_IMPORTANCE,Rank_09_AOD_corrected,N/A,AOD_corrected,667,N/A,N/A,N/A,1.87391
+SHAP_IMPORTANCE,Rank_10_Wind Speed,N/A,Wind Speed,667,N/A,N/A,N/A,1.84492
+SHAP_IMPORTANCE,Rank_11_DOY_sin,N/A,DOY_sin,667,N/A,N/A,N/A,1.7143
+SHAP_IMPORTANCE,Rank_12_AOD_corrected_lag1,N/A,AOD_corrected_lag1,667,N/A,N/A,N/A,1.60344
+SHAP_IMPORTANCE,Rank_13_AOD_dry,N/A,AOD_dry,667,N/A,N/A,N/A,1.26442
+SHAP_IMPORTANCE,Rank_14_f_RH,N/A,f_RH,667,N/A,N/A,N/A,0.94934
+SHAP_IMPORTANCE,Rank_15_AOD_lag1,N/A,AOD_lag1,667,N/A,N/A,N/A,0.84274
+SHAP_IMPORTANCE,Rank_16_AOD,N/A,AOD,667,N/A,N/A,N/A,0.77583
+SHAP_IMPORTANCE,Rank_17_Is_Dust_Season,N/A,Is_Dust_Season,667,N/A,N/A,N/A,0.57023
+SHAP_IMPORTANCE,Rank_18_Wind_U,N/A,Wind_U,667,N/A,N/A,N/A,0.50895
+SHAP_IMPORTANCE,Rank_19_AODcorr_Wind_interact,N/A,AODcorr_Wind_interact,667,N/A,N/A,N/A,0.40532
+ABLATION,Ablation_full_model,All,All,667,0.6744,32.162,N/A,N/A
+ABLATION,Ablation_no_lag1,All,All,667,0.5897,36.101,N/A,N/A
+ABLATION,Ablation_no_lag1_no_AODcorr,All,All,667,0.5944,35.896,N/A,N/A
+BOOTSTRAP_CI,Bootstrap_R2_95CI,All,All,667,0.6744,0.6238,0.7265,N/A
+BOOTSTRAP_CI,Bootstrap_RMSE_95CI,All,All,667,32.162,27.5175,36.6982,N/A
+GAMMA_SENSITIVITY,gamma_Winter_0.80x,Winter,All,667,0.59,N/A,N/A,0.0002
+GAMMA_SENSITIVITY,gamma_Winter_1.20x,Winter,All,667,0.5883,N/A,N/A,-0.0014
+GAMMA_SENSITIVITY,gamma_Pre-Monsoon_0.80x,Pre-Monsoon,All,667,0.5897,N/A,N/A,-0.0001
+GAMMA_SENSITIVITY,gamma_Pre-Monsoon_1.20x,Pre-Monsoon,All,667,0.5899,N/A,N/A,0.0001
+GAMMA_SENSITIVITY,gamma_Monsoon_0.80x,Monsoon,All,667,0.5895,N/A,N/A,-0.0002
+GAMMA_SENSITIVITY,gamma_Monsoon_1.20x,Monsoon,All,667,0.5899,N/A,N/A,0.0001
+GAMMA_SENSITIVITY,gamma_Post-Monsoon_0.80x,Post-Monsoon,All,667,0.5896,N/A,N/A,-0.0001
+GAMMA_SENSITIVITY,gamma_Post-Monsoon_1.20x,Post-Monsoon,All,667,0.5902,N/A,N/A,0.0004
+ERROR_BY_BIN,bin_0_50,All,0-50 µg/m³,231,N/A,20.493,14.1,14.1
+ERROR_BY_BIN,bin_50_100,All,50-100 µg/m³,229,N/A,24.985,9.666,9.666
+ERROR_BY_BIN,bin_100_150,All,100-150 µg/m³,138,N/A,23.439,0.61,-0.61
+ERROR_BY_BIN,bin_150_200,All,150-200 µg/m³,49,N/A,37.432,27.72,-27.72
+ERROR_BY_BIN,bin_200_500,All,200-500 µg/m³,20,N/A,123.593,107.82,-107.82
